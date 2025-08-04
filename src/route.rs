@@ -6,7 +6,7 @@ use super::{
 pub fn new_route(pool: PgPool) -> Router {
     let app = Router::new()
         .route("/", get(async || "hello, world"))
-        // .route("/list", get(controller::user_accounts::list))
+        .route("/list", get(controller::user_accounts::list))
         .route("/{user_id}", get(controller::user_accounts::one))
         .layer(
             TraceLayer::new_for_http()

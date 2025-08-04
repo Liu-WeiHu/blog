@@ -1,11 +1,19 @@
 use crate::PgPool;
 use crate::model::user_accounts::UserAccounts;
 
-pub trait UserAccountsDao {
-    // async fn select_all(&self, offset: i64, limit: i64) -> Result<Vec<UserAccounts>, sqlx::Error>;
-    async fn select_by_id(&self, user_id: i32) -> Result<UserAccounts, sqlx::Error>;
+pub trait UserAccountsDao: Send + Sync + Clone {
+    fn select_all(
+        &self,
+        offset: i64,
+        limit: i64,
+    ) -> impl std::future::Future<Output = Result<Vec<UserAccounts>, sqlx::Error>> + std::marker::Send;
+    fn select_by_id(
+        &self,
+        user_id: i32,
+    ) -> impl std::future::Future<Output = Result<UserAccounts, sqlx::Error>> + std::marker::Send;
 }
 
+#[derive(Clone)]
 struct UserAccountsDaoI {
     pool: PgPool,
 }
@@ -15,16 +23,16 @@ pub fn new_user_accounts_dao(pool: PgPool) -> impl UserAccountsDao {
 }
 
 impl UserAccountsDao for UserAccountsDaoI {
-    // async fn select_all(&self, offset: i64, limit: i64) -> Result<Vec<UserAccounts>, sqlx::Error> {
-    //     sqlx::query_as!(
-    //         UserAccounts,
-    //         "select * from user_accounts limit $1 offset $2",
-    //         limit,
-    //         offset
-    //     )
-    //     .fetch_all(&self.pool)
-    //     .await
-    // }
+    async fn select_all(&self, offset: i64, limit: i64) -> Result<Vec<UserAccounts>, sqlx::Error> {
+        sqlx::query_as!(
+            UserAccounts,
+            "select * from user_accounts limit $1 offset $2",
+            limit,
+            offset
+        )
+        .fetch_all(&self.pool)
+        .await
+    }
 
     async fn select_by_id(&self, user_id: i32) -> Result<UserAccounts, sqlx::Error> {
         sqlx::query_as!(

@@ -5,11 +5,18 @@ use crate::model::user_accounts::UserAccounts;
 use crate::pagination::Pagination;
 use crate::response::ErrCode;
 
-pub trait UserAccountsService {
-    // async fn list(&self, pag: Pagination) -> Result<Vec<UserAccounts>, ErrCode>;
-    async fn one(&self, user_id: i32) -> Result<UserAccounts, ErrCode>;
+pub trait UserAccountsService: Send + Sync + Clone {
+    fn list(
+        &self,
+        pag: Pagination,
+    ) -> impl std::future::Future<Output = Result<Vec<UserAccounts>, ErrCode>> + std::marker::Send;
+    fn one(
+        &self,
+        user_id: i32,
+    ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + std::marker::Send;
 }
 
+#[derive(Clone)]
 struct UserAccountsServiceI<DAO: UserAccountsDao> {
     dao: DAO,
 }
@@ -20,12 +27,12 @@ pub fn new_user_accounts_service(pool: PgPool) -> impl UserAccountsService {
 }
 
 impl<DAO: UserAccountsDao> UserAccountsService for UserAccountsServiceI<DAO> {
-    // async fn list(&self, pag: Pagination) -> Result<Vec<UserAccounts>, ErrCode> {
-    //     match self.dao.select_all(pag.offset, pag.limit).await {
-    //         Ok(users) => Ok(users),
-    //         Err(_) => Err(ErrCode::InternalError),
-    //     }
-    // }
+    async fn list(&self, pag: Pagination) -> Result<Vec<UserAccounts>, ErrCode> {
+        match self.dao.select_all(pag.offset, pag.limit).await {
+            Ok(users) => Ok(users),
+            Err(_) => Err(ErrCode::InternalError),
+        }
+    }
 
     async fn one(&self, user_id: i32) -> Result<UserAccounts, ErrCode> {
         match self.dao.select_by_id(user_id).await {
