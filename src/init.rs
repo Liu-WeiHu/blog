@@ -1,4 +1,7 @@
-use crate::{LazyLock, PgPool, PgPoolOptions, jwt::Keys};
+use crate::jwt::Keys;
+
+use sqlx::{PgPool, postgres::PgPoolOptions};
+use std::sync::LazyLock;
 
 pub static KEYS: LazyLock<Keys> = LazyLock::new(|| {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");

@@ -1,14 +1,22 @@
 use crate::{
-    Duration, IntoResponse, Json, Level, MatchedPath, Next, PgPool, Request, Router, State,
-    StatusCode, TraceLayer, Validation,
-    controller::user_accounts,
+    controller::{user_accounts, user_ext},
     dao::user_accounts::{UserAccountsDao, new_user_accounts_dao},
-    debug, decode, event, get,
     init::KEYS,
     jwt::Claims,
-    middleware, post,
-    response::{self, ErrCode, Resp},
+    response::{ErrCode, Resp, make_response},
 };
+
+use axum::{
+    Router,
+    extract::{Json, MatchedPath, Request, State},
+    http::StatusCode,
+    middleware,
+    response::IntoResponse,
+    routing::{get, post},
+};
+use sqlx::PgPool;
+use std::time::Duration;
+use tower_http::trace::TraceLayer;
 
 pub fn new_route(pool: PgPool) -> Router {
     let users_route = Router::new()
@@ -16,13 +24,15 @@ pub fn new_route(pool: PgPool) -> Router {
         .route("/list", post(user_accounts::list))
         .route("/{user_id}", get(user_accounts::one));
 
-    let api_route =
-        Router::new()
-            .nest("/api/v1/users", users_route)
-            .layer(middleware::from_fn_with_state(
-                pool.clone(),
-                auth_middleware,
-            ));
+    let user_ext_route = Router::new().route("/{user_id}", get(user_ext::one));
+
+    let api_route = Router::new()
+        .nest("/api/v1/users", users_route)
+        .nest("/api/v1/user_ext", user_ext_route)
+        .layer(middleware::from_fn_with_state(
+            pool.clone(),
+            auth_middleware,
+        ));
 
     let login_route = Router::new()
         .route("/register", post(user_accounts::register))
@@ -31,8 +41,8 @@ pub fn new_route(pool: PgPool) -> Router {
     let app_route = Router::new().merge(api_route).merge(login_route).layer(
         TraceLayer::new_for_http()
             .on_request(|req: &Request<_>, _span: &tracing::Span| {
-                event!(
-                    Level::INFO,
+                tracing::event!(
+                    tracing::Level::INFO,
                     "Incoming request: method={}, uri={}, matched_path={}",
                     req.method(),
                     req.uri(),
@@ -45,8 +55,8 @@ pub fn new_route(pool: PgPool) -> Router {
             .on_response(
                 |response: &axum::response::Response, latency: Duration, _span: &tracing::Span| {
                     if response.status() != StatusCode::OK {
-                        event!(
-                            Level::ERROR,
+                        tracing::event!(
+                            tracing::Level::ERROR,
                             "Response completed: status={}, latency={:?}",
                             response.status(),
                             latency
@@ -108,7 +118,7 @@ pub fn new_route(pool: PgPool) -> Router {
 async fn auth_middleware(
     State(pool): State<PgPool>,
     mut req: Request,
-    next: Next,
+    next: middleware::Next,
 ) -> impl IntoResponse {
     // 提取 token
     let token = match req.headers().get("authorization") {
@@ -118,9 +128,7 @@ async fn auth_middleware(
                 None => {
                     return (
                         StatusCode::UNAUTHORIZED,
-                        Json(response::make_response::<Resp<()>>(Err(
-                            ErrCode::UnAuthorized,
-                        ))),
+                        Json(make_response::<Resp<()>>(Err(ErrCode::UnAuthorized))),
                     )
                         .into_response();
                 }
@@ -128,9 +136,7 @@ async fn auth_middleware(
             Err(_) => {
                 return (
                     StatusCode::UNAUTHORIZED,
-                    Json(response::make_response::<Resp<()>>(Err(
-                        ErrCode::UnAuthorized,
-                    ))),
+                    Json(make_response::<Resp<()>>(Err(ErrCode::UnAuthorized))),
                 )
                     .into_response();
             }
@@ -138,26 +144,26 @@ async fn auth_middleware(
         None => {
             return (
                 StatusCode::UNAUTHORIZED,
-                Json(response::make_response::<Resp<()>>(Err(
-                    ErrCode::UnAuthorized,
-                ))),
+                Json(make_response::<Resp<()>>(Err(ErrCode::UnAuthorized))),
             )
                 .into_response();
         }
     };
 
-    debug!("Extracted token: {}", token);
+    tracing::debug!("Extracted token: {}", token);
 
     // 解码 JWT
-    let claims = match decode::<Claims>(token, &KEYS.decoding, &Validation::default()) {
+    let claims = match jsonwebtoken::decode::<Claims>(
+        token,
+        &KEYS.decoding,
+        &jsonwebtoken::Validation::default(),
+    ) {
         Ok(data) => data.claims,
         Err(e) => {
             tracing::error!("JWT decode error: {}", e);
             return (
                 StatusCode::UNAUTHORIZED,
-                Json(response::make_response::<Resp<()>>(Err(
-                    ErrCode::InvalidToken,
-                ))),
+                Json(make_response::<Resp<()>>(Err(ErrCode::InvalidToken))),
             )
                 .into_response();
         }
@@ -170,9 +176,7 @@ async fn auth_middleware(
             tracing::error!("Parse user_id error: {}", e);
             return (
                 StatusCode::UNAUTHORIZED,
-                Json(response::make_response::<Resp<()>>(Err(
-                    ErrCode::InvalidToken,
-                ))),
+                Json(make_response::<Resp<()>>(Err(ErrCode::InvalidToken))),
             )
                 .into_response();
         }
@@ -186,9 +190,7 @@ async fn auth_middleware(
             tracing::error!("Database query error: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(response::make_response::<Resp<()>>(Err(
-                    ErrCode::InternalError,
-                ))),
+                Json(make_response::<Resp<()>>(Err(ErrCode::InternalError))),
             )
                 .into_response();
         }

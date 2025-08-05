@@ -1,4 +1,4 @@
-use crate::Deserialize;
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct RegisterReq {

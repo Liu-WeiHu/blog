@@ -1,4 +1,6 @@
-use crate::{PgPool, model::user_accounts::UserAccounts};
+use crate::model::user_accounts::UserAccounts;
+
+use sqlx::PgPool;
 
 pub trait UserAccountsDao: Send + Sync + Clone {
     fn select_all(

@@ -1,11 +1,17 @@
 use crate::{
-    Extension, IntoResponse, Json, Path, PgPool, State,
-    controller::user_accounts_args::{LoginReq, RegisterReq},
+    dto::user_accounts::{LoginReq, RegisterReq},
     model::user_accounts::UserAccounts,
     pagination::Pagination,
     response,
     service::user_accounts::{UserAccountsService, new_user_accounts_service},
 };
+
+use axum::{
+    Extension,
+    extract::{Json, Path, State},
+    response::IntoResponse,
+};
+use sqlx::PgPool;
 
 pub async fn test_user(Extension(user): Extension<UserAccounts>) -> impl IntoResponse {
     response::make_response(Ok(user))

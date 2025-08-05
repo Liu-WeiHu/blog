@@ -1,15 +1,15 @@
-use crate::{DecodingKey, Deserialize, EncodingKey, Serialize};
+use serde::{Deserialize, Serialize};
 
 pub struct Keys {
-    pub encoding: EncodingKey,
-    pub decoding: DecodingKey,
+    pub encoding: jsonwebtoken::EncodingKey,
+    pub decoding: jsonwebtoken::DecodingKey,
 }
 
 impl Keys {
     pub fn new(secret: &[u8]) -> Self {
         Self {
-            encoding: EncodingKey::from_secret(secret),
-            decoding: DecodingKey::from_secret(secret),
+            encoding: jsonwebtoken::EncodingKey::from_secret(secret),
+            decoding: jsonwebtoken::DecodingKey::from_secret(secret),
         }
     }
 }

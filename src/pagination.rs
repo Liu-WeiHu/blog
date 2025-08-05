@@ -1,7 +1,7 @@
-use crate::{
-    Body, Deserialize, FromRequest, Json, Request, Serialize,
-    response::{self, ErrCode, Resp},
-};
+use crate::response::{self, ErrCode, Resp};
+
+use axum::extract::{FromRequest, Json, Request};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
 pub struct Pagination {
@@ -21,7 +21,7 @@ where
 {
     type Rejection = Resp<()>;
 
-    async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let boby = Json::<PageParams>::from_request(req, state).await;
         let page_params = match boby {
             Ok(Json(page_params)) => page_params,

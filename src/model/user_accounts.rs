@@ -1,6 +1,6 @@
-use crate::{NaiveDateTime, Serialize};
+use chrono::NaiveDateTime;
 
-#[derive(Serialize, Clone, Debug, Default)]
+#[derive(serde::Serialize, Clone, Debug, Default)]
 pub struct UserAccounts {
     pub id: i32,
     pub username: String,
