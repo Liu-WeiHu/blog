@@ -1,4 +1,4 @@
-use super::{IntoResponse, Serialize, StatusCode};
+use super::{IntoResponse, Response, Serialize, StatusCode};
 
 #[derive(Serialize)]
 pub enum ErrCode {
@@ -30,7 +30,7 @@ pub fn make_response<T: Serialize>(input: Result<T, ErrCode>) -> Resp<T> {
 }
 
 impl<T: Serialize + Send + Sync> IntoResponse for Resp<T> {
-    fn into_response(self) -> axum::response::Response {
+    fn into_response(self) -> Response {
         let status = match self.code {
             0 => StatusCode::OK,
             200000..300000 => StatusCode::UNAUTHORIZED,

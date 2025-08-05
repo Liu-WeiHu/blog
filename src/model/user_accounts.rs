@@ -1,7 +1,7 @@
 use crate::NaiveDateTime;
 use crate::Serialize;
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct UserAccounts {
     pub id: i32,
     pub username: String,

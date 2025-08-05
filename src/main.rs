@@ -1,23 +1,27 @@
 use axum::{
-    RequestPartsExt, Router,
-    extract::{FromRequest, FromRequestParts, MatchedPath, Path, Query, Request, State},
-    http::{self, StatusCode, request::Parts},
+    Extension, RequestPartsExt, Router,
+    body::Body,
+    extract::{FromRequest, FromRequestParts, Json, MatchedPath, Path, Query, Request, State},
+    http::{StatusCode, request::Parts},
     middleware::{self, Next},
     response::IntoResponse,
-    routing::get,
+    response::Response,
+    routing::{get, patch, post, put},
 };
 
 use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
+use bytes::Bytes;
 use chrono::NaiveDateTime;
+use http_body_util::BodyExt;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::LazyLock;
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
-use tracing::{Level, event};
+use tracing::{Level, debug, event, info};
 
 use jsonwebtoken::{DecodingKey, EncodingKey, Validation, decode};
 mod controller;
@@ -38,6 +42,6 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
         .unwrap();
-    tracing::info!("listening on {}", listener.local_addr().unwrap());
+    info!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
