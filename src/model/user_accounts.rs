@@ -1,5 +1,4 @@
-use crate::NaiveDateTime;
-use crate::Serialize;
+use crate::{NaiveDateTime, Serialize};
 
 #[derive(Serialize, Clone, Debug, Default)]
 pub struct UserAccounts {

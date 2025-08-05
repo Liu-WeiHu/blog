@@ -1,31 +1,24 @@
 use axum::{
-    Extension, RequestPartsExt, Router,
+    Extension, Router,
     body::Body,
-    extract::{FromRequest, FromRequestParts, Json, MatchedPath, Path, Query, Request, State},
-    http::{StatusCode, request::Parts},
+    extract::{FromRequest, Json, MatchedPath, Path, Request, State},
+    http::StatusCode,
     middleware::{self, Next},
-    response::IntoResponse,
-    response::Response,
-    routing::{get, patch, post, put},
+    response::{IntoResponse, Response},
+    routing::{get, post},
 };
 
-use axum_extra::{
-    TypedHeader,
-    headers::{Authorization, authorization::Bearer},
-};
 use bcrypt::{DEFAULT_COST, hash, verify};
-use bytes::Bytes;
-use chrono::NaiveDateTime;
-use http_body_util::BodyExt;
+use chrono::{DateTime, NaiveDateTime, Utc};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, postgres::PgPoolOptions};
+use tower_http::trace::TraceLayer;
+use tracing::{Level, debug, error, event, info};
+
 use std::sync::LazyLock;
 use std::time::Duration;
-use std::time::{SystemTime, UNIX_EPOCH};
-use tower_http::trace::TraceLayer;
-use tracing::{Level, debug, error, event, info, warn};
 
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 mod controller;
 mod dao;
 mod init;

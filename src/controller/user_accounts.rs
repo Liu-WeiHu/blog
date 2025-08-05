@@ -1,17 +1,13 @@
-use crate::Extension;
-use crate::IntoResponse;
-use crate::Json;
-use crate::Path;
-use crate::PgPool;
-use crate::State;
-use crate::controller::user_accounts_args::{LoginReq, RegisterReq};
-use crate::model::user_accounts::UserAccounts;
-use crate::pagination::Pagination;
-use crate::response;
-use crate::service::user_accounts::UserAccountsService;
-use crate::service::user_accounts::new_user_accounts_service;
+use crate::{
+    Extension, IntoResponse, Json, Path, PgPool, State,
+    controller::user_accounts_args::{LoginReq, RegisterReq},
+    model::user_accounts::UserAccounts,
+    pagination::Pagination,
+    response,
+    service::user_accounts::{UserAccountsService, new_user_accounts_service},
+};
 
-pub async fn test_user(Extension(user): Extension<Option<UserAccounts>>) -> impl IntoResponse {
+pub async fn test_user(Extension(user): Extension<UserAccounts>) -> impl IntoResponse {
     response::make_response(Ok(user))
 }
 

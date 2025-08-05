@@ -1,17 +1,14 @@
-use crate::Header;
-use crate::PgPool;
-use crate::dao::user_accounts::UserAccountsDao;
-use crate::dao::user_accounts::new_user_accounts_dao;
-use crate::encode;
-use crate::init::KEYS;
-use crate::jwt::AuthBody;
-use crate::jwt::Claims;
-use crate::model::user_accounts::UserAccounts;
-use crate::pagination::Pagination;
-use crate::response::ErrCode;
-use crate::{DEFAULT_COST, hash, verify};
-use crate::{SystemTime, UNIX_EPOCH};
-use crate::{debug, error, info, warn};
+use crate::{
+    DEFAULT_COST, DateTime, Header, PgPool, Utc,
+    dao::user_accounts::{UserAccountsDao, new_user_accounts_dao},
+    debug, encode, error, hash,
+    init::KEYS,
+    jwt::{AuthBody, Claims},
+    model::user_accounts::UserAccounts,
+    pagination::Pagination,
+    response::ErrCode,
+    verify,
+};
 
 pub trait UserAccountsService: Send + Sync + Clone {
     fn list(
@@ -97,18 +94,14 @@ impl<DAO: UserAccountsDao> UserAccountsService for UserAccountsServiceI<DAO> {
             error!("db err = {}", err);
             ErrCode::InternalError
         })?;
-        let v = verify(password, &user.password).map_err(|err| {
+        if !verify(password, &user.password).map_err(|err| {
             error!("password 解密失败err = {}", err);
             ErrCode::InternalError
-        })?;
-        if !v {
+        })? {
             return Err(ErrCode::InputPasswordInvalid);
-        }
+        };
 
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let now = Utc::now().timestamp();
 
         let claims = Claims {
             sub: user.id.to_string(),
@@ -118,6 +111,14 @@ impl<DAO: UserAccountsDao> UserAccountsService for UserAccountsServiceI<DAO> {
         // Create the authorization token
         let token = encode(&Header::default(), &claims, &KEYS.encoding).map_err(|err| {
             error!("jwt encode err = {}", err);
+            ErrCode::InternalError
+        })?;
+
+        let mut user = user;
+
+        user.last_login_time = Some(DateTime::from_timestamp(now, 0).unwrap().naive_utc());
+        self.dao.update_login_time_by_id(user).await.map_err(|e| {
+            error!("修改登陆时间出错error = {}", e);
             ErrCode::InternalError
         })?;
 

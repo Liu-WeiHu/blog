@@ -1,5 +1,4 @@
-use crate::PgPool;
-use crate::model::user_accounts::UserAccounts;
+use crate::{PgPool, model::user_accounts::UserAccounts};
 
 pub trait UserAccountsDao: Send + Sync + Clone {
     fn select_all(
@@ -18,6 +17,11 @@ pub trait UserAccountsDao: Send + Sync + Clone {
     fn select_by_email(
         &self,
         email: String,
+    ) -> impl std::future::Future<Output = Result<UserAccounts, sqlx::Error>> + std::marker::Send;
+
+    fn update_login_time_by_id(
+        &self,
+        user: UserAccounts,
     ) -> impl std::future::Future<Output = Result<UserAccounts, sqlx::Error>> + std::marker::Send;
 }
 
@@ -73,5 +77,19 @@ impl UserAccountsDao for UserAccountsDaoI {
         )
         .fetch_one(&self.pool)
         .await
+    }
+
+    async fn update_login_time_by_id(
+        &self,
+        user: UserAccounts,
+    ) -> Result<UserAccounts, sqlx::Error> {
+        sqlx::query!(
+            "update user_accounts set last_login_time = $1 where id = $2",
+            user.last_login_time,
+            user.id,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(user)
     }
 }

@@ -1,9 +1,4 @@
-use crate::{
-    Authorization, Bearer, DecodingKey, Deserialize, EncodingKey, FromRequestParts, Parts,
-    RequestPartsExt, Serialize, TypedHeader, Validation, debug, decode, error,
-    init::KEYS,
-    response::{self, ErrCode, Resp},
-};
+use crate::{DecodingKey, Deserialize, EncodingKey, Serialize};
 
 pub struct Keys {
     pub encoding: EncodingKey,
@@ -22,8 +17,8 @@ impl Keys {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: String,
-    pub exp: u64,
-    pub iat: u64,
+    pub exp: i64,
+    pub iat: i64,
 }
 
 #[derive(Serialize)]
