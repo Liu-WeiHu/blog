@@ -1,15 +1,23 @@
-use super::{
+use crate::{
     Body, BodyExt, Bytes, Deserialize, Duration, FromRequest, IntoResponse, Json, Level,
-    MatchedPath, Next, PgPool, Request, Response, Router, Serialize, State, StatusCode, TraceLayer,
-    controller, controller::user_accounts, dao::user_accounts::UserAccountsDao,
-    dao::user_accounts::new_user_accounts_dao, event, get, middleware, patch, post, put,
+    MatchedPath, Next, PgPool, Request, Response, Router, State, StatusCode, TraceLayer,
+    Validation,
+    controller::user_accounts,
+    dao::user_accounts::{UserAccountsDao, new_user_accounts_dao},
+    debug, decode, error, event, get,
+    init::KEYS,
+    jwt::Claims,
+    middleware, patch, post, put,
+    response::{self, ErrCode, Resp},
 };
 
 pub fn new_route(pool: PgPool) -> Router {
     let users_route = Router::new()
+        .route("/test", post(user_accounts::test_user))
         .route("/list", post(user_accounts::list))
         .route("/{user_id}", get(user_accounts::one))
-        .route("/test", post(user_accounts::test_user));
+        .route("/register", post(user_accounts::register))
+        .route("/login", post(user_accounts::login));
 
     let api = Router::new()
         .nest("/api/v1/users", users_route)
@@ -93,4 +101,50 @@ async fn user_info_middleware(
     let mut req = req;
     req.extensions_mut().insert(user);
     next.run(req).await
+}
+
+async fn auth_middleware(mut req: Request, next: Next) -> Box<dyn IntoResponse> {
+    let token = match req.headers().get("authorization") {
+        Some(header) => {
+            let str = match header.to_str() {
+                Ok(s) => s,
+                Err(_) => {
+                    return Box::new(response::make_response::<Resp<()>>(Err(
+                        ErrCode::UnAuthorized,
+                    )));
+                }
+            };
+            match str.strip_prefix("Bearer ") {
+                Some(t) => t,
+                None => {
+                    return Box::new(response::make_response::<Resp<()>>(Err(
+                        ErrCode::UnAuthorized,
+                    )));
+                }
+            }
+        }
+        None => {
+            return Box::new(response::make_response::<Resp<()>>(Err(
+                ErrCode::UnAuthorized,
+            )));
+        }
+    };
+
+    debug!("Extracted token: {}", token);
+
+    let claims = match decode::<Claims>(token, &KEYS.decoding, &Validation::default()) {
+        Ok(data) => data.claims,
+        Err(e) => {
+            error!("JWT decode error: {}", e);
+            return Box::new(response::make_response::<Resp<()>>(Err(
+                ErrCode::InvalidToken,
+            )));
+        }
+    };
+
+    // Insert claims into request extensions for downstream handlers
+    req.extensions_mut().insert(claims);
+
+    // Proceed to the next middleware or handler
+    Box::new(next.run(req).await)
 }

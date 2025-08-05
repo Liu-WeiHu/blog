@@ -1,4 +1,4 @@
-use super::{IntoResponse, Response, Serialize, StatusCode};
+use crate::{IntoResponse, Response, Serialize, StatusCode};
 
 #[derive(Serialize)]
 pub enum ErrCode {
@@ -6,6 +6,9 @@ pub enum ErrCode {
     InvalidToken,
     InputArgsError,
     UnAuthorized,
+    InputNameInvalid,
+    InputEmailInvalid,
+    InputPasswordInvalid,
 }
 
 #[derive(Serialize)]
@@ -20,9 +23,14 @@ pub fn make_response<T: Serialize>(input: Result<T, ErrCode>) -> Resp<T> {
         Ok(data) => (0, "".to_string(), Some(data)),
         Err(err_code) => match err_code {
             ErrCode::InternalError => (100001, "服务器内部错误".to_string(), None),
+
             ErrCode::InvalidToken => (200001, "无效的token".to_string(), None),
             ErrCode::UnAuthorized => (200002, "没有授权".to_string(), None),
+
             ErrCode::InputArgsError => (300001, "入参错误".to_string(), None),
+            ErrCode::InputNameInvalid => (300002, "输入名字无效".to_string(), None),
+            ErrCode::InputEmailInvalid => (300003, "输入邮箱无效".to_string(), None),
+            ErrCode::InputPasswordInvalid => (300003, "输入密码无效".to_string(), None),
         },
     };
 

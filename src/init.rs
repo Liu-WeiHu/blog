@@ -1,4 +1,4 @@
-use super::{LazyLock, PgPool, PgPoolOptions, jwt::Keys};
+use crate::{LazyLock, PgPool, PgPoolOptions, jwt::Keys};
 
 pub static KEYS: LazyLock<Keys> = LazyLock::new(|| {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");

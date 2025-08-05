@@ -1,10 +1,17 @@
+use crate::Header;
 use crate::PgPool;
 use crate::dao::user_accounts::UserAccountsDao;
 use crate::dao::user_accounts::new_user_accounts_dao;
-use crate::debug;
+use crate::encode;
+use crate::init::KEYS;
+use crate::jwt::AuthBody;
+use crate::jwt::Claims;
 use crate::model::user_accounts::UserAccounts;
 use crate::pagination::Pagination;
 use crate::response::ErrCode;
+use crate::{DEFAULT_COST, hash, verify};
+use crate::{SystemTime, UNIX_EPOCH};
+use crate::{debug, error, info, warn};
 
 pub trait UserAccountsService: Send + Sync + Clone {
     fn list(
@@ -15,6 +22,15 @@ pub trait UserAccountsService: Send + Sync + Clone {
         &self,
         user_id: i32,
     ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + std::marker::Send;
+    fn register(
+        &self,
+        user: UserAccounts,
+    ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + std::marker::Send;
+    fn login(
+        &self,
+        email: String,
+        password: String,
+    ) -> impl std::future::Future<Output = Result<AuthBody, ErrCode>> + std::marker::Send;
 }
 
 #[derive(Clone)]
@@ -33,18 +49,78 @@ impl<DAO: UserAccountsDao> UserAccountsService for UserAccountsServiceI<DAO> {
             "UserAccountsService.list offset = {}, limit = {}",
             pag.offset, pag.limit
         );
-        match self.dao.select_all(pag.offset, pag.limit).await {
-            Ok(users) => Ok(users),
-            Err(_) => Err(ErrCode::InternalError),
-        }
+        self.dao
+            .select_all(pag.offset, pag.limit)
+            .await
+            .map_err(|err| {
+                error!("db err = {}", err);
+                ErrCode::InternalError
+            })
     }
 
     async fn one(&self, user_id: i32) -> Result<UserAccounts, ErrCode> {
         debug!("UserAccountsService.one user_id = {}", user_id);
-        match self.dao.select_by_id(user_id).await {
-            Ok(user) => Ok(user),
-            Err(sqlx::Error::RowNotFound) => Err(ErrCode::InputArgsError),
-            Err(_) => Err(ErrCode::InternalError),
+        self.dao.select_by_id(user_id).await.map_err(|err| {
+            error!("db err = {}", err);
+            ErrCode::InternalError
+        })
+    }
+
+    async fn register(&self, mut user: UserAccounts) -> Result<UserAccounts, ErrCode> {
+        debug!("UserAccountsService.register user = {:?}", user);
+        if !(3..50).contains(&user.username.len()) {
+            return Err(ErrCode::InputNameInvalid);
         }
+        if !(3..50).contains(&user.email.len()) {
+            return Err(ErrCode::InputEmailInvalid);
+        }
+        if !(3..50).contains(&user.password.len()) {
+            return Err(ErrCode::InputPasswordInvalid);
+        }
+        let hashed = hash(&user.password, DEFAULT_COST).map_err(|err| {
+            error!("password = {} 加密失败err = {}", &user.password, err);
+            ErrCode::InternalError
+        })?;
+        user.password = hashed;
+        self.dao.insert(user).await.map_err(|err| {
+            error!("db err = {}", err);
+            ErrCode::InternalError
+        })
+    }
+
+    async fn login(&self, email: String, password: String) -> Result<AuthBody, ErrCode> {
+        if email.is_empty() || password.is_empty() {
+            return Err(ErrCode::InputArgsError);
+        }
+
+        let user = self.dao.select_by_email(email).await.map_err(|err| {
+            error!("db err = {}", err);
+            ErrCode::InternalError
+        })?;
+        let v = verify(password, &user.password).map_err(|err| {
+            error!("password 解密失败err = {}", err);
+            ErrCode::InternalError
+        })?;
+        if !v {
+            return Err(ErrCode::InputPasswordInvalid);
+        }
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let claims = Claims {
+            sub: user.id.to_string(),
+            exp: now + 7 * 24 * 60 * 60,
+            iat: now,
+        };
+        // Create the authorization token
+        let token = encode(&Header::default(), &claims, &KEYS.encoding).map_err(|err| {
+            error!("jwt encode err = {}", err);
+            ErrCode::InternalError
+        })?;
+
+        Ok(AuthBody::new(token))
     }
 }

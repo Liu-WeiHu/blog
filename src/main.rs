@@ -13,6 +13,7 @@ use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
+use bcrypt::{DEFAULT_COST, hash, verify};
 use bytes::Bytes;
 use chrono::NaiveDateTime;
 use http_body_util::BodyExt;
@@ -20,10 +21,11 @@ use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::LazyLock;
 use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tower_http::trace::TraceLayer;
-use tracing::{Level, debug, event, info};
+use tracing::{Level, debug, error, event, info, warn};
 
-use jsonwebtoken::{DecodingKey, EncodingKey, Validation, decode};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 mod controller;
 mod dao;
 mod init;
