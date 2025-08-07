@@ -1,3 +1,5 @@
+-- Add migration script here
+
 -- public.user_accounts definition
 CREATE TABLE public.user_accounts (
 	id int4 DEFAULT nextval('users_id_seq'::regclass) NOT NULL,
@@ -9,3 +11,4 @@ CREATE TABLE public.user_accounts (
 	CONSTRAINT users_email_key UNIQUE (email),
 	CONSTRAINT users_pkey PRIMARY KEY (id)
 );
+

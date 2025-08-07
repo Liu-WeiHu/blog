@@ -1,5 +1,5 @@
 use crate::{
-    dto::user_accounts::{LoginReq, RegisterReq},
+    dto::user_accounts::{LoginReq, RegisterReq, UpdateUserInfoReq},
     model::user_accounts::UserAccounts,
     pagination::Pagination,
     response,
@@ -36,18 +36,21 @@ pub async fn register(
     Json(req): Json<RegisterReq>,
 ) -> impl IntoResponse {
     let svc = new_user_accounts_service(pool);
-    let user = UserAccounts {
-        username: req.username,
-        email: req.email,
-        password: req.password,
-        ..Default::default()
-    };
-    let res = svc.register(user).await;
+    let res = svc.register(req).await;
     response::make_response(res)
 }
 
 pub async fn login(State(pool): State<PgPool>, Json(req): Json<LoginReq>) -> impl IntoResponse {
     let svc = new_user_accounts_service(pool);
     let res = svc.login(req.email, req.password).await;
+    response::make_response(res)
+}
+
+pub async fn edit(
+    State(pool): State<PgPool>,
+    Json(req): Json<UpdateUserInfoReq>,
+) -> impl IntoResponse {
+    let svc = new_user_accounts_service(pool);
+    let res = svc.edit_info(req).await;
     response::make_response(res)
 }

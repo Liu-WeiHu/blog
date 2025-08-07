@@ -3,6 +3,7 @@ mod dao;
 mod dto;
 mod init;
 mod jwt;
+mod middleware;
 mod model;
 mod pagination;
 mod response;

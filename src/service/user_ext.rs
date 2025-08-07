@@ -2,6 +2,7 @@ use crate::{
     dao::user_ext::{UserExtDao, new_user_ext_dao},
     model::user_ext::UserExt,
     response::ErrCode,
+    service::get_conn,
 };
 
 use sqlx::PgPool;
@@ -14,21 +15,24 @@ pub trait UserExtService: Send + Sync + Clone {
 }
 
 #[derive(Clone)]
-struct UserExtServiceI<DAO: UserExtDao> {
-    dao: DAO,
+struct UserExtServiceI {
+    pool: PgPool,
 }
 
 pub fn new_user_ext_service(pool: PgPool) -> impl UserExtService {
-    let dao = new_user_ext_dao(pool);
-    UserExtServiceI { dao }
+    UserExtServiceI { pool }
 }
 
-impl<DAO: UserExtDao> UserExtService for UserExtServiceI<DAO> {
+impl UserExtService for UserExtServiceI {
     async fn one(&self, user_id: i32) -> Result<UserExt, ErrCode> {
         tracing::debug!("UserExtService.one user_id = {}", user_id);
-        self.dao.select_by_id(user_id).await.map_err(|err| {
-            tracing::error!("db err = {}", err);
-            ErrCode::InternalError
-        })
+        let mut conn = get_conn(self.pool.clone()).await.unwrap();
+        new_user_ext_dao()
+            .select_by_id(&mut conn, user_id)
+            .await
+            .map_err(|err| {
+                tracing::error!("db err = {}", err);
+                ErrCode::InternalError
+            })
     }
 }

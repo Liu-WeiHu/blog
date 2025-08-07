@@ -14,6 +14,8 @@ pub enum ErrCode {
     InputNameInvalid,
     InputEmailInvalid,
     InputPasswordInvalid,
+    InputLoginInvalid,
+    EmailAlreadyRegistered,
 }
 
 #[derive(Serialize)]
@@ -36,6 +38,8 @@ pub fn make_response<T: Serialize>(input: Result<T, ErrCode>) -> Resp<T> {
             ErrCode::InputNameInvalid => (300002, "输入名字无效".to_string(), None),
             ErrCode::InputEmailInvalid => (300003, "输入邮箱无效".to_string(), None),
             ErrCode::InputPasswordInvalid => (300003, "输入密码无效".to_string(), None),
+            ErrCode::InputLoginInvalid => (300004, "输入邮箱或密码错误".to_string(), None),
+            ErrCode::EmailAlreadyRegistered => (300005, "邮箱已被注册".to_string(), None),
         },
     };
 
