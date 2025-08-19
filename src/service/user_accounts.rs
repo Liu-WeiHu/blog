@@ -16,6 +16,7 @@ use crate::{
 
 use bcrypt::{DEFAULT_COST, hash, verify};
 use chrono::{DateTime, Utc};
+use redis::Commands;
 use sqlx::PgPool;
 
 pub trait UserAccountsService: Send + Sync + Clone {
@@ -33,6 +34,7 @@ pub trait UserAccountsService: Send + Sync + Clone {
     ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + std::marker::Send;
     fn login(
         &self,
+        redis_conn: redis::Connection,
         email: Cow<'static, str>,
         password: Cow<'static, str>,
     ) -> impl std::future::Future<Output = Result<AuthBody, ErrCode>> + std::marker::Send;
@@ -139,6 +141,7 @@ impl UserAccountsService for UserAccountsServiceI {
 
     async fn login(
         &self,
+        mut redis_conn: redis::Connection,
         email: Cow<'static, str>,
         password: Cow<'static, str>,
     ) -> Result<AuthBody, ErrCode> {
@@ -176,10 +179,28 @@ impl UserAccountsService for UserAccountsServiceI {
         let mut user = user;
 
         user.last_login_time = Some(DateTime::from_timestamp(now, 0).unwrap().naive_utc());
-        dao.update_login_time_by_id(&mut conn, user)
+        dao.update_login_time_by_id(&mut conn, user.clone())
             .await
             .map_err(|e| {
                 tracing::error!("修改登陆时间出错error = {}", e);
+                ErrCode::InternalError
+            })?;
+
+        let redis_key = format!("user:{}", user.id);
+        let user_json = serde_json::to_string(&user).map_err(|e| {
+            tracing::error!("user to json err = {}, user.id = {}", e, &user.id);
+            ErrCode::InternalError
+        })?;
+
+        let _: () = redis_conn
+            .set_ex(&redis_key, &user_json, 7 * 24 * 60 * 60)
+            .map_err(|e| {
+                tracing::error!(
+                    "redis set_ex err = {}, redis_key = {}, value = {}",
+                    e,
+                    redis_key,
+                    user_json
+                );
                 ErrCode::InternalError
             })?;
 

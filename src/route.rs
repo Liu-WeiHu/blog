@@ -1,4 +1,5 @@
 use crate::{
+    AppState,
     controller::{user_accounts, user_ext},
     middleware::auth_middleware,
 };
@@ -10,11 +11,10 @@ use axum::{
     middleware,
     routing::{get, post, put},
 };
-use sqlx::PgPool;
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
 
-pub fn new_route(pool: PgPool) -> Router {
+pub fn new_route(app_state: AppState) -> Router {
     let users_route = Router::new()
         .route("/test", post(user_accounts::test_user))
         .route("/list", post(user_accounts::list))
@@ -27,7 +27,7 @@ pub fn new_route(pool: PgPool) -> Router {
         .nest("/api/v1/users", users_route)
         .nest("/api/v1/user_ext", user_ext_route)
         .layer(middleware::from_fn_with_state(
-            pool.clone(),
+            app_state.clone(),
             auth_middleware,
         ));
 
@@ -67,5 +67,5 @@ pub fn new_route(pool: PgPool) -> Router {
         .merge(app_route)
         .route("/", get(async || "hello, world"))
         .fallback(async || (StatusCode::NOT_FOUND, "not found!"))
-        .with_state(pool)
+        .with_state(app_state)
 }

@@ -1,5 +1,6 @@
 use crate::jwt::Keys;
 
+use redis::Client;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::LazyLock;
 
@@ -9,9 +10,14 @@ pub static KEYS: LazyLock<Keys> = LazyLock::new(|| {
 });
 
 pub async fn get_db_pool() -> PgPool {
-    let dsn = std::env::var("DATABASE_URL").expect("DB_DSN must be set");
+    let dsn = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     PgPoolOptions::new()
         .connect(&dsn)
         .await
         .expect("db connect is error")
+}
+
+pub async fn get_redis_client() -> Client {
+    let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL must be set");
+    redis::Client::open(redis_url).expect("redis connect is error")
 }

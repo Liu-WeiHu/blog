@@ -5,17 +5,18 @@ use axum::{
     middleware,
     response::IntoResponse,
 };
-use sqlx::PgPool;
+use redis::Commands;
 
 use crate::{
-    dao::user_accounts::{UserAccountsDao, new_user_accounts_dao},
+    AppState,
     init::KEYS,
     jwt::Claims,
+    model::user_accounts::UserAccounts,
     response::{ErrCode, Resp, make_response},
 };
 
 pub async fn auth_middleware(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     mut req: Request,
     next: middleware::Next,
 ) -> impl IntoResponse {
@@ -81,15 +82,28 @@ pub async fn auth_middleware(
         }
     };
 
-    // 查询用户
-    let mut conn = pool.acquire().await.unwrap();
-    let user = match new_user_accounts_dao().select_one(&mut conn, user_id).await {
+    // 从缓存获取数据
+    let mut redis_conn = state.redis.get_connection().unwrap();
+    let redis_key = format!("user:{user_id}");
+    let user_info_json: String = match redis_conn.get(&redis_key) {
+        Ok(user_info_json) => user_info_json,
+        Err(e) => {
+            tracing::error!("redis get key is err = {}, redis_key = {}", e, redis_key);
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(make_response::<Resp<()>>(Err(ErrCode::InvalidToken))),
+            )
+                .into_response();
+        }
+    };
+
+    let user = match serde_json::from_str::<UserAccounts>(&user_info_json) {
         Ok(user) => user,
         Err(e) => {
-            tracing::error!("Database query error: {}", e);
+            tracing::error!("str to user is err = {}, json = {}", e, &user_info_json);
             return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(make_response::<Resp<()>>(Err(ErrCode::InternalError))),
+                StatusCode::UNAUTHORIZED,
+                Json(make_response::<Resp<()>>(Err(ErrCode::InvalidToken))),
             )
                 .into_response();
         }
