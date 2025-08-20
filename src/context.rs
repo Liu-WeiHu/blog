@@ -3,7 +3,13 @@ use std::{
     sync::Arc,
 };
 
+use axum::{
+    extract::{FromRequestParts, State},
+    http::request::Parts,
+};
 use dashmap::DashMap;
+
+use crate::response::{self, ErrCode, make_response};
 
 #[derive(Clone)]
 pub struct TypedStorage {
@@ -83,5 +89,20 @@ impl Context {
         F: FnOnce(&mut T) -> R,
     {
         self.storage.with_mut(f)
+    }
+}
+
+impl<S> FromRequestParts<S> for Context
+where
+    S: Send + Sync + Any,
+{
+    type Rejection = response::Resp<()>;
+
+    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        if let Some(ctx) = (state as &dyn Any).downcast_ref::<Context>() {
+            return Ok(ctx.clone());
+        }
+
+        Err(make_response(Err(ErrCode::InternalError)))
     }
 }
