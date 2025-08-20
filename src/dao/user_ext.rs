@@ -39,6 +39,10 @@ impl UserExtDao for UserExtDaoI {
         )
         .fetch_one(executor)
         .await
+        .or_else(|err| match err {
+            sqlx::Error::RowNotFound => Ok(UserExt::default()),
+            other => Err(other),
+        })
     }
 
     async fn insert(

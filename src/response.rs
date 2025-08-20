@@ -16,6 +16,8 @@ pub enum ErrCode {
     InputPasswordInvalid,
     InputLoginInvalid,
     EmailAlreadyRegistered,
+    DbServiceUnavailable,
+    RedisServiceUnavailable,
 }
 
 #[derive(Serialize)]
@@ -30,6 +32,8 @@ pub fn make_response<T: Serialize>(input: Result<T, ErrCode>) -> Resp<T> {
         Ok(data) => (0, "".to_string(), Some(data)),
         Err(err_code) => match err_code {
             ErrCode::InternalError => (100001, "服务器内部错误".to_string(), None),
+            ErrCode::DbServiceUnavailable => (100002, "数据库服务不可用".to_string(), None),
+            ErrCode::RedisServiceUnavailable => (100003, "redis服务不可用".to_string(), None),
 
             ErrCode::InvalidToken => (200001, "无效的token".to_string(), None),
             ErrCode::UnAuthorized => (200002, "没有授权".to_string(), None),

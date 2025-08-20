@@ -33,7 +33,7 @@ pub struct LoginReq {
     pub password: Cow<'static, str>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Default)]
 pub struct UserInfo {
     pub id: i32,
     pub username: Cow<'static, str>,

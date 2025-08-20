@@ -3,7 +3,7 @@ use crate::response::{self, ErrCode, Resp};
 use axum::extract::{FromRequest, Json, Request};
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Pagination {
     pub offset: i64,
     pub limit: i64,

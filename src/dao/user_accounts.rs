@@ -79,6 +79,10 @@ impl UserAccountsDao for UserAccountsDaoI {
         )
         .fetch_one(executor)
         .await
+        .or_else(|err| match err {
+            sqlx::Error::RowNotFound => Ok(UserAccounts::default()),
+            other => Err(other),
+        })
     }
 
     async fn select_by_id(
@@ -91,6 +95,10 @@ impl UserAccountsDao for UserAccountsDaoI {
         , user_id)
         .fetch_one(executor)
         .await
+        .or_else(|err| match err {
+            sqlx::Error::RowNotFound => Ok(UserInfo::default()),
+            other => Err(other),
+        })
     }
 
     async fn insert(
@@ -128,6 +136,10 @@ impl UserAccountsDao for UserAccountsDaoI {
         )
         .fetch_one(executor)
         .await
+        .or_else(|err| match err {
+            sqlx::Error::RowNotFound => Ok(UserAccounts::default()),
+            other => Err(other),
+        })
     }
 
     async fn update_login_time_by_id(

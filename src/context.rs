@@ -75,12 +75,18 @@ impl Context {
         &self.redis
     }
 
-    pub async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, sqlx::Error> {
-        self.pool.acquire().await
+    pub async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, ErrCode> {
+        self.pool.acquire().await.map_err(|e| {
+            tracing::error!("Failed to get database connection: {}", e);
+            ErrCode::InternalError
+        })
     }
 
-    pub async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, sqlx::Error> {
-        self.pool.begin().await
+    pub async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, ErrCode> {
+        self.pool.begin().await.map_err(|e| {
+            tracing::error!("Failed to get database transaction: {}", e);
+            ErrCode::InternalError
+        })
     }
 
     // 代理到 storage 的方法
