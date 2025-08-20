@@ -12,7 +12,6 @@ use crate::{
     model::{user_accounts::UserAccounts, user_ext::UserExt},
     pagination::Pagination,
     response::ErrCode,
-    service::{get_conn, get_tx},
 };
 
 use bcrypt::{DEFAULT_COST, hash, verify};
@@ -59,7 +58,7 @@ impl UserAccountsService for UserAccountsServiceI {
             pag.offset,
             pag.limit
         );
-        let mut conn = get_conn(self.ctx.get_pool().clone()).await.unwrap();
+        let mut conn = self.ctx.get_db_conn().await.unwrap();
         new_user_accounts_dao()
             .select_all(&mut conn, pag.offset, pag.limit)
             .await
@@ -71,7 +70,7 @@ impl UserAccountsService for UserAccountsServiceI {
 
     async fn one(&self, user_id: i32) -> Result<UserInfo, ErrCode> {
         tracing::debug!("UserAccountsService.one user_id = {}", user_id);
-        let mut conn = get_conn(self.ctx.get_pool().clone()).await.unwrap();
+        let mut conn = self.ctx.get_db_conn().await.unwrap();
         new_user_accounts_dao()
             .select_by_id(&mut conn, user_id)
             .await
@@ -105,7 +104,7 @@ impl UserAccountsService for UserAccountsServiceI {
 
         // 开启事物, 由于 tx 实现了 Drop trait
         // drop 方法里自动rollback了.所以只需要显示commit就可以了.
-        let mut tx = get_tx(self.ctx.get_pool().clone()).await.unwrap();
+        let mut tx = self.ctx.get_db_tx().await.unwrap();
         let res_user = new_user_accounts_dao()
             .insert(&mut tx, user)
             .await
@@ -148,7 +147,7 @@ impl UserAccountsService for UserAccountsServiceI {
         }
 
         let dao = new_user_accounts_dao();
-        let mut conn = get_conn(self.ctx.get_pool().clone()).await.unwrap();
+        let mut conn = self.ctx.get_db_conn().await.unwrap();
         let user = dao.select_by_email(&mut conn, email).await.map_err(|err| {
             tracing::error!("db err = {}", err);
             ErrCode::InternalError
@@ -192,7 +191,7 @@ impl UserAccountsService for UserAccountsServiceI {
 
         let _: () = self
             .ctx
-            .get_redis()
+            .get_redis_client()
             .clone()
             .set_ex(&redis_key, &user_json, 7 * 24 * 60 * 60)
             .map_err(|e| {
@@ -216,7 +215,7 @@ impl UserAccountsService for UserAccountsServiceI {
         if !(3..50).contains(&req.username.len()) {
             return Err(ErrCode::InputNameInvalid);
         }
-        let mut tx = get_tx(self.ctx.get_pool().clone()).await.unwrap();
+        let mut tx = self.ctx.get_db_tx().await.unwrap();
         let user = UserAccounts {
             id: req.user_id,
             username: req.username,

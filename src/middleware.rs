@@ -83,7 +83,7 @@ pub async fn auth_middleware(
     };
 
     // 从缓存获取数据
-    let mut redis_conn = ctx.get_redis().get_connection().unwrap();
+    let mut redis_conn = ctx.get_redis_client().get_connection().unwrap();
     let redis_key = format!("user:{user_id}");
     let user_info_json: String = match redis_conn.get(&redis_key) {
         Ok(user_info_json) => user_info_json,

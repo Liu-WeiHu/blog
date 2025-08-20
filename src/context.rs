@@ -5,6 +5,7 @@ use std::{
 
 use axum::{extract::FromRequestParts, http::request::Parts};
 use dashmap::DashMap;
+use sqlx::{Postgres, Transaction, pool::PoolConnection};
 
 use crate::response::{self, ErrCode, make_response};
 
@@ -13,6 +14,7 @@ pub struct TypedStorage {
     inner: Arc<DashMap<TypeId, Box<dyn Any + Send + Sync>>>,
 }
 
+#[allow(dead_code)]
 impl TypedStorage {
     pub fn new() -> Self {
         Self {
@@ -30,7 +32,6 @@ impl TypedStorage {
             .and_then(|entry| entry.downcast_ref::<T>().cloned())
     }
 
-    #[allow(dead_code)]
     pub fn with_mut<T: 'static + Send + Sync, F, R>(&self, f: F) -> Option<R>
     where
         F: FnOnce(&mut T) -> R,
@@ -40,7 +41,6 @@ impl TypedStorage {
             .and_then(|mut entry| entry.downcast_mut::<T>().map(f))
     }
 
-    #[allow(dead_code)]
     pub fn remove<T: 'static + Send + Sync>(&self) -> Option<T> {
         self.inner
             .remove(&TypeId::of::<T>())
@@ -57,6 +57,7 @@ pub struct Context {
     storage: TypedStorage,
 }
 
+#[allow(dead_code)]
 impl Context {
     pub fn new(pool: sqlx::PgPool, redis: redis::Client) -> Self {
         Self {
@@ -66,12 +67,20 @@ impl Context {
         }
     }
 
-    pub fn get_pool(&self) -> &sqlx::PgPool {
+    pub fn get_db_pool(&self) -> &sqlx::PgPool {
         &self.pool
     }
 
-    pub fn get_redis(&self) -> &redis::Client {
+    pub fn get_redis_client(&self) -> &redis::Client {
         &self.redis
+    }
+
+    pub async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, sqlx::Error> {
+        self.pool.acquire().await
+    }
+
+    pub async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, sqlx::Error> {
+        self.pool.begin().await
     }
 
     // 代理到 storage 的方法
@@ -83,7 +92,6 @@ impl Context {
         self.storage.get()
     }
 
-    #[allow(dead_code)]
     pub fn with_mut<T: 'static + Send + Sync, F, R>(&self, f: F) -> Option<R>
     where
         F: FnOnce(&mut T) -> R,

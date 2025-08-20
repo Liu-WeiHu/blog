@@ -1,5 +1,3 @@
-use sqlx::{PgPool, Postgres, Transaction, pool::PoolConnection};
-
 macro_rules! map_to_user_ext {
     ($req:expr) => {
         UserExt {
@@ -28,11 +26,3 @@ macro_rules! map_to_user_ext {
 
 pub mod user_accounts;
 pub mod user_ext;
-
-pub async fn get_tx(pool: PgPool) -> Result<Transaction<'static, Postgres>, sqlx::Error> {
-    pool.begin().await
-}
-
-pub async fn get_conn(pool: PgPool) -> Result<PoolConnection<Postgres>, sqlx::Error> {
-    pool.acquire().await
-}
