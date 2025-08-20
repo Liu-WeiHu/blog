@@ -107,10 +107,9 @@ where
     type Rejection = response::Resp<()>;
 
     async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        if let Some(ctx) = (state as &dyn Any).downcast_ref::<Context>() {
-            return Ok(ctx.clone());
-        }
-
-        Err(make_response(Err(ErrCode::InternalError)))
+        (state as &dyn Any)
+            .downcast_ref::<Context>()
+            .cloned()
+            .ok_or(make_response(Err(ErrCode::InternalError)))
     }
 }
