@@ -8,7 +8,7 @@ use axum::{
 use redis::Commands;
 
 use crate::{
-    AppState,
+    context::Context,
     init::KEYS,
     jwt::Claims,
     model::user_accounts::UserAccounts,
@@ -16,8 +16,8 @@ use crate::{
 };
 
 pub async fn auth_middleware(
-    State(state): State<AppState>,
-    mut req: Request,
+    State(ctx): State<Context>,
+    req: Request,
     next: middleware::Next,
 ) -> impl IntoResponse {
     // 提取 token
@@ -83,7 +83,7 @@ pub async fn auth_middleware(
     };
 
     // 从缓存获取数据
-    let mut redis_conn = state.redis.get_connection().unwrap();
+    let mut redis_conn = ctx.get_redis().get_connection().unwrap();
     let redis_key = format!("user:{user_id}");
     let user_info_json: String = match redis_conn.get(&redis_key) {
         Ok(user_info_json) => user_info_json,
@@ -110,7 +110,8 @@ pub async fn auth_middleware(
     };
 
     // 加入到扩展里
-    req.extensions_mut().insert(user);
+    // req.extensions_mut().insert(user);
+    ctx.insert(user);
     next.run(req).await
 }
 

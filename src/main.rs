@@ -1,5 +1,6 @@
-use sqlx::PgPool;
+use crate::context::Context;
 
+mod context;
 mod controller;
 mod dao;
 mod dto;
@@ -12,19 +13,13 @@ mod response;
 mod route;
 mod service;
 
-#[derive(Clone)]
-struct AppState {
-    pool: PgPool,
-    redis: redis::Client,
-}
-
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
     let pool = init::get_db_pool().await;
     let redis = init::get_redis_client().await;
-    let app_state = AppState { pool, redis };
-    let app = route::new_route(app_state);
+    let ctx = Context::new(pool, redis);
+    let app = route::new_route(ctx);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
         .unwrap();

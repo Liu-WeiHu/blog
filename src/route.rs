@@ -1,5 +1,5 @@
 use crate::{
-    AppState,
+    context::Context,
     controller::{user_accounts, user_ext},
     middleware::auth_middleware,
 };
@@ -14,7 +14,7 @@ use axum::{
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
 
-pub fn new_route(app_state: AppState) -> Router {
+pub fn new_route(ctx: Context) -> Router {
     let users_route = Router::new()
         .route("/test", post(user_accounts::test_user))
         .route("/list", post(user_accounts::list))
@@ -26,10 +26,7 @@ pub fn new_route(app_state: AppState) -> Router {
     let api_route = Router::new()
         .nest("/api/v1/users", users_route)
         .nest("/api/v1/user_ext", user_ext_route)
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            auth_middleware,
-        ));
+        .layer(middleware::from_fn_with_state(ctx.clone(), auth_middleware));
 
     let login_route = Router::new()
         .route("/register", post(user_accounts::register))
@@ -67,5 +64,5 @@ pub fn new_route(app_state: AppState) -> Router {
         .merge(app_route)
         .route("/", get(async || "hello, world"))
         .fallback(async || (StatusCode::NOT_FOUND, "not found!"))
-        .with_state(app_state)
+        .with_state(ctx)
 }

@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{
+    context::Context,
     dao::{
         user_accounts::{UserAccountsDao, new_user_accounts_dao},
         user_ext::{UserExtDao, new_user_ext_dao},
@@ -17,7 +18,6 @@ use crate::{
 use bcrypt::{DEFAULT_COST, hash, verify};
 use chrono::{DateTime, Utc};
 use redis::Commands;
-use sqlx::PgPool;
 
 pub trait UserAccountsService: Send + Sync + Clone {
     fn list(
@@ -34,7 +34,6 @@ pub trait UserAccountsService: Send + Sync + Clone {
     ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + std::marker::Send;
     fn login(
         &self,
-        redis_conn: redis::Connection,
         email: Cow<'static, str>,
         password: Cow<'static, str>,
     ) -> impl std::future::Future<Output = Result<AuthBody, ErrCode>> + std::marker::Send;
@@ -46,11 +45,11 @@ pub trait UserAccountsService: Send + Sync + Clone {
 
 #[derive(Clone)]
 struct UserAccountsServiceI {
-    pool: PgPool,
+    ctx: Context,
 }
 
-pub fn new_user_accounts_service(pool: PgPool) -> impl UserAccountsService {
-    UserAccountsServiceI { pool }
+pub fn new_user_accounts_service(ctx: Context) -> impl UserAccountsService {
+    UserAccountsServiceI { ctx }
 }
 
 impl UserAccountsService for UserAccountsServiceI {
@@ -60,7 +59,7 @@ impl UserAccountsService for UserAccountsServiceI {
             pag.offset,
             pag.limit
         );
-        let mut conn = get_conn(self.pool.clone()).await.unwrap();
+        let mut conn = get_conn(self.ctx.get_pool().clone()).await.unwrap();
         new_user_accounts_dao()
             .select_all(&mut conn, pag.offset, pag.limit)
             .await
@@ -72,7 +71,7 @@ impl UserAccountsService for UserAccountsServiceI {
 
     async fn one(&self, user_id: i32) -> Result<UserInfo, ErrCode> {
         tracing::debug!("UserAccountsService.one user_id = {}", user_id);
-        let mut conn = get_conn(self.pool.clone()).await.unwrap();
+        let mut conn = get_conn(self.ctx.get_pool().clone()).await.unwrap();
         new_user_accounts_dao()
             .select_by_id(&mut conn, user_id)
             .await
@@ -106,7 +105,7 @@ impl UserAccountsService for UserAccountsServiceI {
 
         // 开启事物, 由于 tx 实现了 Drop trait
         // drop 方法里自动rollback了.所以只需要显示commit就可以了.
-        let mut tx = get_tx(self.pool.clone()).await.unwrap();
+        let mut tx = get_tx(self.ctx.get_pool().clone()).await.unwrap();
         let res_user = new_user_accounts_dao()
             .insert(&mut tx, user)
             .await
@@ -141,7 +140,6 @@ impl UserAccountsService for UserAccountsServiceI {
 
     async fn login(
         &self,
-        mut redis_conn: redis::Connection,
         email: Cow<'static, str>,
         password: Cow<'static, str>,
     ) -> Result<AuthBody, ErrCode> {
@@ -150,7 +148,7 @@ impl UserAccountsService for UserAccountsServiceI {
         }
 
         let dao = new_user_accounts_dao();
-        let mut conn = get_conn(self.pool.clone()).await.unwrap();
+        let mut conn = get_conn(self.ctx.get_pool().clone()).await.unwrap();
         let user = dao.select_by_email(&mut conn, email).await.map_err(|err| {
             tracing::error!("db err = {}", err);
             ErrCode::InternalError
@@ -192,7 +190,10 @@ impl UserAccountsService for UserAccountsServiceI {
             ErrCode::InternalError
         })?;
 
-        let _: () = redis_conn
+        let _: () = self
+            .ctx
+            .get_redis()
+            .clone()
             .set_ex(&redis_key, &user_json, 7 * 24 * 60 * 60)
             .map_err(|e| {
                 tracing::error!(
@@ -215,7 +216,7 @@ impl UserAccountsService for UserAccountsServiceI {
         if !(3..50).contains(&req.username.len()) {
             return Err(ErrCode::InputNameInvalid);
         }
-        let mut tx = get_tx(self.pool.clone()).await.unwrap();
+        let mut tx = get_tx(self.ctx.get_pool().clone()).await.unwrap();
         let user = UserAccounts {
             id: req.user_id,
             username: req.username,
