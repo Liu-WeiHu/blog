@@ -3,10 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use axum::{
-    extract::{FromRequestParts, State},
-    http::request::Parts,
-};
+use axum::{extract::FromRequestParts, http::request::Parts};
 use dashmap::DashMap;
 
 use crate::response::{self, ErrCode, make_response};
@@ -33,6 +30,7 @@ impl TypedStorage {
             .and_then(|entry| entry.downcast_ref::<T>().cloned())
     }
 
+    #[allow(dead_code)]
     pub fn with_mut<T: 'static + Send + Sync, F, R>(&self, f: F) -> Option<R>
     where
         F: FnOnce(&mut T) -> R,
@@ -42,6 +40,7 @@ impl TypedStorage {
             .and_then(|mut entry| entry.downcast_mut::<T>().map(f))
     }
 
+    #[allow(dead_code)]
     pub fn remove<T: 'static + Send + Sync>(&self) -> Option<T> {
         self.inner
             .remove(&TypeId::of::<T>())
@@ -84,6 +83,7 @@ impl Context {
         self.storage.get()
     }
 
+    #[allow(dead_code)]
     pub fn with_mut<T: 'static + Send + Sync, F, R>(&self, f: F) -> Option<R>
     where
         F: FnOnce(&mut T) -> R,

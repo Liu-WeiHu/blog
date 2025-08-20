@@ -8,7 +8,7 @@ use crate::{
 };
 
 use axum::{
-    extract::{Json, Path, State},
+    extract::{Json, Path},
     response::IntoResponse,
 };
 

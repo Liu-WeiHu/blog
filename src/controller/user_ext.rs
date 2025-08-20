@@ -4,10 +4,7 @@ use crate::{
     service::user_ext::{UserExtService, new_user_ext_service},
 };
 
-use axum::{
-    extract::{Path, State},
-    response::IntoResponse,
-};
+use axum::{extract::Path, response::IntoResponse};
 
 pub async fn one(ctx: Context, Path(user_id): Path<i32>) -> impl IntoResponse {
     let svc = new_user_ext_service(ctx);

@@ -11,6 +11,7 @@ pub trait UserAccountsDao: Send + Sync {
         offset: i64,
         limit: i64,
     ) -> impl std::future::Future<Output = Result<Vec<UserAccounts>, sqlx::Error>> + std::marker::Send;
+    #[allow(dead_code)]
     fn select_one(
         &self,
         executor: &mut PgConnection,
