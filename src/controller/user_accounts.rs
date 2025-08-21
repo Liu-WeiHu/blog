@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    dto::user_accounts::{LoginReq, RegisterReq, UpdateUserInfoReq},
+    dto::user_accounts::{LoginReq, RegisterReq},
     model::user_accounts::UserAccounts,
     pagination::Pagination,
     response::{self, ErrCode},
@@ -43,8 +43,12 @@ pub async fn login(ctx: Context, Json(req): Json<LoginReq>) -> impl IntoResponse
     response::make_response(res)
 }
 
-pub async fn edit(ctx: Context, Json(req): Json<UpdateUserInfoReq>) -> impl IntoResponse {
+pub async fn edit(
+    ctx: Context,
+    Path(user_id): Path<i32>,
+    Json(req): Json<RegisterReq>,
+) -> impl IntoResponse {
     let svc = new_user_accounts_service(ctx);
-    let res = svc.edit_info(req).await;
+    let res = svc.edit_info(req, user_id).await;
     response::make_response(res)
 }

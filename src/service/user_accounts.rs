@@ -6,7 +6,7 @@ use crate::{
         user_accounts::{UserAccountsDao, new_user_accounts_dao},
         user_ext::{UserExtDao, new_user_ext_dao},
     },
-    dto::user_accounts::{RegisterReq, UpdateUserInfoReq, UserInfo},
+    dto::user_accounts::{RegisterReq, UserInfo},
     init::KEYS,
     jwt::{AuthBody, Claims},
     model::{user_accounts::UserAccounts, user_ext::UserExt},
@@ -42,7 +42,8 @@ pub trait UserAccountsService: Send + Sync + Clone {
     ) -> impl std::future::Future<Output = Result<AuthBody, ErrCode>> + std::marker::Send;
     fn edit_info(
         &self,
-        req: UpdateUserInfoReq,
+        req: RegisterReq,
+        user_id: i32,
     ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + std::marker::Send;
 }
 
@@ -187,11 +188,11 @@ impl UserAccountsService for UserAccountsServiceI {
         Ok(AuthBody::new(token))
     }
 
-    #[tracing::instrument(skip(self), fields(user_id = req.user_id, username = %req.username))]
-    async fn edit_info(&self, req: UpdateUserInfoReq) -> Result<UserAccounts, ErrCode> {
+    #[tracing::instrument(skip(self), fields(user_id = user_id, username = %req.username))]
+    async fn edit_info(&self, req: RegisterReq, user_id: i32) -> Result<UserAccounts, ErrCode> {
         tracing::debug!("Editing user info");
 
-        if req.user_id <= 0 {
+        if user_id <= 0 {
             return Err(ErrCode::InputArgsError);
         }
         if !(3..50).contains(&req.username.len()) {
@@ -199,7 +200,7 @@ impl UserAccountsService for UserAccountsServiceI {
         }
         let mut tx = self.ctx.get_db_tx().await?;
         let user = UserAccounts {
-            id: req.user_id,
+            id: user_id,
             username: req.username,
             ..Default::default()
         };
@@ -209,7 +210,7 @@ impl UserAccountsService for UserAccountsServiceI {
             .map_err(|err| handle_error(Box::new(err), "dao update"))?;
 
         // 使用宏映射
-        let user_ext = map_to_user_ext!(req);
+        let user_ext = map_to_user_ext!(req, user_id);
         tracing::debug!("user_ext: {:?}", user_ext);
         new_user_ext_dao()
             .update_by_user_id(&mut tx, user_ext)

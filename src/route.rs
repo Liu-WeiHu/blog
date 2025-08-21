@@ -17,7 +17,7 @@ pub fn new_route(ctx: Context) -> Router {
         .route("/test", post(user_accounts::test_user))
         .route("/list", post(user_accounts::list))
         .route("/{user_id}", get(user_accounts::one))
-        .route("/edit", put(user_accounts::edit));
+        .route("/{user_id}", put(user_accounts::edit));
 
     let user_ext_route = Router::new().route("/{user_id}", get(user_ext::one));
 
