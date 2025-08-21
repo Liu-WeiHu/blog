@@ -16,6 +16,7 @@ macro_rules! map_to_user_ext {
     };
 }
 
+pub mod posts;
 pub mod user_accounts;
 pub mod user_ext;
 

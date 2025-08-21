@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    controller::{user_accounts, user_ext},
+    controller::{posts, user_accounts, user_ext},
     middleware::{auth_middleware, log_request, log_response},
 };
 
@@ -21,9 +21,16 @@ pub fn new_route(ctx: Context) -> Router {
 
     let user_ext_route = Router::new().route("/{user_id}", get(user_ext::one));
 
+    let posts_route = Router::new()
+        .route("/{id}", get(posts::one))
+        .route("/list", post(posts::list))
+        .route("/add", post(posts::add))
+        .route("/{id}", put(posts::edit));
+
     let api_route = Router::new()
         .nest("/api/v1/users", users_route)
         .nest("/api/v1/user_ext", user_ext_route)
+        .nest("/api/v1/posts", posts_route)
         .layer(middleware::from_fn_with_state(ctx.clone(), auth_middleware));
 
     let login_route = Router::new()
