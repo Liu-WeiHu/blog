@@ -5,7 +5,7 @@ use axum::{
 
 use serde::Serialize;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub enum ErrCode {
     InternalError,
     InvalidToken,
@@ -18,6 +18,7 @@ pub enum ErrCode {
     EmailAlreadyRegistered,
     DbServiceUnavailable,
     RedisServiceUnavailable,
+    UnPermission,
 }
 
 #[derive(Serialize)]
@@ -37,6 +38,7 @@ pub fn make_response<T: Serialize>(input: Result<T, ErrCode>) -> Resp<T> {
 
             ErrCode::InvalidToken => (200001, "无效的token".to_string(), None),
             ErrCode::UnAuthorized => (200002, "没有授权".to_string(), None),
+            ErrCode::UnPermission => (200003, "权限不足".to_string(), None),
 
             ErrCode::InputArgsError => (300001, "入参错误".to_string(), None),
             ErrCode::InputNameInvalid => (300002, "输入名字无效".to_string(), None),

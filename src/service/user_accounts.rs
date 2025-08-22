@@ -3,10 +3,11 @@ use std::borrow::Cow;
 use crate::{
     context::Context,
     dao::{
+        permission::{RbacDao, new_rbac_dao},
         user_accounts::{UserAccountsDao, new_user_accounts_dao},
         user_ext::{UserExtDao, new_user_ext_dao},
     },
-    dto::user_accounts::{RegisterReq, UserInfo},
+    dto::user_accounts::{CacheUser, RegisterReq, UserInfo},
     init::KEYS,
     jwt::{AuthBody, Claims},
     model::{user_accounts::UserAccounts, user_ext::UserExt},
@@ -70,7 +71,7 @@ impl UserAccountsServiceI {
     }
 
     /// 缓存用户信息到Redis
-    async fn cache_user_info(&self, user: &UserAccounts) -> Result<(), ErrCode> {
+    async fn cache_user_info(&self, user: &CacheUser) -> Result<(), ErrCode> {
         let redis_key = format!("user:{}", user.id);
         let user_json = serde_json::to_string(user)
             .map_err(|err| handle_error(Box::new(err), "cache_user_info"))?;
@@ -183,8 +184,20 @@ impl UserAccountsService for UserAccountsServiceI {
             .await
             .map_err(|err| handle_error(Box::new(err), "dao update_login_time_by_id"))?;
 
+        // 查询用户角色
+        let role_ids = new_rbac_dao()
+            .select_user_role_by_user_id(&mut conn, user.id)
+            .await
+            .map_err(|err| handle_error(Box::new(err), "dao select_user_role_by_user_id"))?
+            .into_iter()
+            .map(|role| role.role_id)
+            .collect::<Vec<i32>>();
+
+        let mut cache_user = map_to_cache_user!(user);
+        cache_user.role_ids = role_ids;
+
         // 缓存token
-        self.cache_user_info(&user).await?;
+        self.cache_user_info(&cache_user).await?;
         Ok(AuthBody::new(token))
     }
 

@@ -1,7 +1,6 @@
 use crate::{
     context::Context,
-    dto::user_accounts::{LoginReq, RegisterReq},
-    model::user_accounts::UserAccounts,
+    dto::user_accounts::{CacheUser, LoginReq, RegisterReq},
     pagination::Pagination,
     response::{self, ErrCode},
     service::user_accounts::{UserAccountsService, new_user_accounts_service},
@@ -13,7 +12,7 @@ use axum::{
 };
 
 pub async fn test_user(ctx: Context) -> impl IntoResponse {
-    let user = ctx.get::<UserAccounts>().ok_or(ErrCode::InternalError);
+    let user = ctx.get::<CacheUser>().ok_or(ErrCode::UnAuthorized);
     response::make_response(user)
 }
 

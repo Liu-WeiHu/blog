@@ -9,6 +9,7 @@ mod jwt;
 mod middleware;
 mod model;
 mod pagination;
+mod rbac;
 mod response;
 mod route;
 mod service;
@@ -19,6 +20,8 @@ async fn main() {
     let pool = init::get_db_pool().await;
     let redis = init::get_redis_client().await;
     let ctx = Context::new(pool, redis);
+    let rbac = init::cache_rbac(ctx.clone()).await;
+    ctx.insert(rbac);
     let app = route::new_route(ctx);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await

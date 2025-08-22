@@ -16,6 +16,20 @@ macro_rules! map_to_user_ext {
     };
 }
 
+macro_rules! map_to_cache_user {
+    ($req:expr) => {
+        CacheUser {
+            id: $req.id,
+            username: $req.username.into(),
+            email: $req.email.into(),
+            created_at: $req.created_at,
+            last_login_time: $req.last_login_time,
+            role_ids: vec![],
+        }
+    };
+}
+
+pub mod permission;
 pub mod posts;
 pub mod user_accounts;
 pub mod user_ext;

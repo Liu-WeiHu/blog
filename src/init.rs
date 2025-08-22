@@ -1,4 +1,9 @@
-use crate::jwt::Keys;
+use crate::{
+    context::Context,
+    jwt::Keys,
+    rbac::PermissionRegistry,
+    service::permission::{RbacService, new_rbac_service},
+};
 
 use redis::Client;
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -20,4 +25,11 @@ pub async fn get_db_pool() -> PgPool {
 pub async fn get_redis_client() -> Client {
     let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL must be set");
     redis::Client::open(redis_url).expect("redis connect is error")
+}
+
+pub async fn cache_rbac(ctx: Context) -> PermissionRegistry {
+    new_rbac_service(ctx)
+        .get_rbac_permission()
+        .await
+        .expect("get rbac permission error")
 }

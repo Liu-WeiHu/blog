@@ -1,8 +1,10 @@
 use crate::{
     context::Context,
     dao::posts::{PostsDao, new_posts_dao},
-    model::{posts::Posts, user_accounts::UserAccounts},
+    dto::user_accounts::CacheUser,
+    model::posts::Posts,
     pagination::Pagination,
+    rbac::PermissionPoints,
     response::ErrCode,
     service::handle_error,
 };
@@ -41,6 +43,7 @@ impl PostsService for PostsServiceI {
     async fn list(&self, pag: Pagination) -> Result<Vec<Posts>, ErrCode> {
         tracing::debug!("Listing posts with pagination");
 
+        self.ctx.can_access(PermissionPoints::ListPost)?;
         let mut conn = self.ctx.get_db_conn().await?;
         new_posts_dao()
             .select_all(&mut conn, pag.offset, pag.limit)
@@ -52,6 +55,7 @@ impl PostsService for PostsServiceI {
     async fn one(&self, id: i32) -> Result<Posts, ErrCode> {
         tracing::debug!("Getting posts");
 
+        self.ctx.can_access(PermissionPoints::GetPost)?;
         let mut conn = self.ctx.get_db_conn().await?;
         new_posts_dao()
             .select_one(&mut conn, id)
@@ -63,15 +67,13 @@ impl PostsService for PostsServiceI {
     async fn edit(&self, mut req: Posts, id: i32) -> Result<Posts, ErrCode> {
         tracing::debug!("Editing posts");
 
+        self.ctx.can_access(PermissionPoints::EditPost)?;
         if id <= 0 {
             return Err(ErrCode::InputArgsError);
         }
 
         req.id = id;
-        let user = self
-            .ctx
-            .get::<UserAccounts>()
-            .ok_or(ErrCode::InternalError)?;
+        let user = self.ctx.get::<CacheUser>().ok_or(ErrCode::InternalError)?;
 
         req.user_id = user.id;
         let mut conn = self.ctx.get_db_conn().await?;
@@ -84,12 +86,10 @@ impl PostsService for PostsServiceI {
 
     #[tracing::instrument(skip(self), fields(title = %req.title))]
     async fn add(&self, mut req: Posts) -> Result<Posts, ErrCode> {
-        tracing::debug!("Editing posts");
+        tracing::debug!("Create posts");
 
-        let user = self
-            .ctx
-            .get::<UserAccounts>()
-            .ok_or(ErrCode::InternalError)?;
+        self.ctx.can_access(PermissionPoints::CreatePost)?;
+        let user = self.ctx.get::<CacheUser>().ok_or(ErrCode::InternalError)?;
 
         let mut conn = self.ctx.get_db_conn().await?;
         req.user_id = user.id;

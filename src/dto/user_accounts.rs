@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
@@ -31,4 +32,14 @@ pub struct UserInfo {
     pub education: Option<String>,
     pub hometown: Option<String>,
     pub address: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct CacheUser {
+    pub id: i32,
+    pub username: Cow<'static, str>,
+    pub email: Cow<'static, str>,
+    pub created_at: Option<NaiveDateTime>,
+    pub last_login_time: Option<NaiveDateTime>,
+    pub role_ids: Vec<i32>,
 }

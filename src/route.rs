@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    controller::{posts, user_accounts, user_ext},
+    controller::{permission, posts, user_accounts, user_ext},
     middleware::{auth_middleware, log_request, log_response},
 };
 
@@ -27,11 +27,17 @@ pub fn new_route(ctx: Context) -> Router {
         .route("/add", post(posts::add))
         .route("/{id}", put(posts::edit));
 
-    let api_route = Router::new()
-        .nest("/api/v1/users", users_route)
-        .nest("/api/v1/user_ext", user_ext_route)
-        .nest("/api/v1/posts", posts_route)
+    let permission_route =
+        Router::new().route("/user_perm", get(permission::get_visual_permissions));
+
+    let service_route = Router::new()
+        .nest("/users", users_route)
+        .nest("/user_ext", user_ext_route)
+        .nest("/posts", posts_route)
+        .nest("/visual", permission_route)
         .layer(middleware::from_fn_with_state(ctx.clone(), auth_middleware));
+
+    let api_route = Router::new().nest("/api/v1", service_route);
 
     let login_route = Router::new()
         .route("/register", post(user_accounts::register))

@@ -7,7 +7,11 @@ use axum::{extract::FromRequestParts, http::request::Parts};
 use dashmap::DashMap;
 use sqlx::{Postgres, Transaction, pool::PoolConnection};
 
-use crate::response::{self, ErrCode, make_response};
+use crate::{
+    dto::user_accounts::CacheUser,
+    rbac::{ANONYMOUS, PermissionPoints, PermissionRegistry},
+    response::{self, ErrCode, make_response},
+};
 
 #[derive(Clone)]
 pub struct TypedStorage {
@@ -103,6 +107,24 @@ impl Context {
         F: FnOnce(&mut T) -> R,
     {
         self.storage.with_mut(f)
+    }
+
+    // 验证权限
+    pub fn can_access(&self, operate: PermissionPoints) -> Result<bool, ErrCode> {
+        let pr = self
+            .get::<PermissionRegistry>()
+            .ok_or(ErrCode::InternalError)?;
+        let map = pr.get(operate.as_ref()).ok_or(ErrCode::InternalError)?;
+
+        let can_access = match self.get::<CacheUser>() {
+            Some(user) => user
+                .role_ids
+                .iter()
+                .any(|role_id| map.contains_key(role_id)),
+            None => map.values().any(|x| *x == ANONYMOUS),
+        };
+
+        can_access.then_some(true).ok_or(ErrCode::UnPermission)
     }
 }
 
