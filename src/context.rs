@@ -114,7 +114,7 @@ impl Context {
         let pr = self
             .get::<PermissionRegistry>()
             .ok_or(ErrCode::InternalError)?;
-        let map = pr.get(operate.as_ref()).ok_or(ErrCode::InternalError)?;
+        let map = pr.get(&operate).ok_or(ErrCode::InternalError)?;
 
         let can_access = match self.get::<CacheUser>() {
             Some(user) => user

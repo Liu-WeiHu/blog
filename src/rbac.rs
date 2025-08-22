@@ -2,8 +2,9 @@ use std::{collections::HashMap, sync::Arc};
 
 // 就初始化一次,然后只读不写,不涉及数据安全问题.  第一个键是 权限点, 第二个键是 role_id,
 // value是role名字
-pub type PermissionRegistry = Arc<HashMap<String, HashMap<i32, String>>>;
+pub type PermissionRegistry = Arc<HashMap<PermissionPoints, HashMap<i32, String>>>;
 
+#[derive(PartialEq, Eq, Hash, serde::Deserialize)]
 pub enum PermissionPoints {
     // 可视权限点
     ViewPostCreation, // 查看文章创建按钮

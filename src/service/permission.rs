@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     context::Context,
     dao::permission::{RbacDao, new_rbac_dao},
-    rbac::PermissionRegistry,
+    rbac::{PermissionPoints, PermissionRegistry},
     response::ErrCode,
     service::handle_error,
 };
@@ -40,8 +40,8 @@ impl RbacService for RbacServiceI {
             .into_iter()
             .fold(
                 HashMap::new(),
-                |mut acc: HashMap<String, HashMap<i32, String>>, item| {
-                    acc.entry(item.permission_name.into_owned())
+                |mut acc: HashMap<PermissionPoints, HashMap<i32, String>>, item| {
+                    acc.entry(item.permission_name)
                         .or_default()
                         .insert(item.id, item.role_name.into_owned());
                     acc

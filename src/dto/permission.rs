@@ -2,11 +2,13 @@ use std::borrow::Cow;
 
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+use crate::rbac::PermissionPoints;
+
+#[derive(Deserialize)]
 pub struct RbacRolePermission {
     pub id: i32,
     pub role_name: Cow<'static, str>,
-    pub permission_name: Cow<'static, str>,
+    pub permission_name: PermissionPoints,
 }
 
 #[derive(Debug, Deserialize, Default)]
