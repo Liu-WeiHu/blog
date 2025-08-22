@@ -1,122 +1,126 @@
-use std::{
-    any::{Any, TypeId},
-    sync::Arc,
-};
-
-use axum::{extract::FromRequestParts, http::request::Parts};
-use dashmap::DashMap;
 use sqlx::{Postgres, Transaction, pool::PoolConnection};
 
 use crate::{
     dto::user_accounts::CacheUser,
     rbac::{ANONYMOUS, PermissionPoints, PermissionRegistry},
-    response::{self, ErrCode, make_response},
+    response::ErrCode,
 };
 
-#[derive(Clone)]
-pub struct TypedStorage {
-    inner: Arc<DashMap<TypeId, Box<dyn Any + Send + Sync>>>,
-}
-
-#[allow(dead_code)]
-impl TypedStorage {
-    pub fn new() -> Self {
-        Self {
-            inner: Arc::new(DashMap::new()),
-        }
-    }
-
-    pub fn insert<T: 'static + Send + Sync + Clone>(&self, value: T) {
-        self.inner.insert(TypeId::of::<T>(), Box::new(value));
-    }
-
-    pub fn get<T: 'static + Send + Sync + Clone>(&self) -> Option<T> {
-        self.inner
-            .get(&TypeId::of::<T>())
-            .and_then(|entry| entry.downcast_ref::<T>().cloned())
-    }
-
-    pub fn with_mut<T: 'static + Send + Sync, F, R>(&self, f: F) -> Option<R>
-    where
-        F: FnOnce(&mut T) -> R,
-    {
-        self.inner
-            .get_mut(&TypeId::of::<T>())
-            .and_then(|mut entry| entry.downcast_mut::<T>().map(f))
-    }
-
-    pub fn remove<T: 'static + Send + Sync>(&self) -> Option<T> {
-        self.inner
-            .remove(&TypeId::of::<T>())
-            .map(|(_, boxed)| boxed)
-            .and_then(|boxed| boxed.downcast().ok())
-            .map(|boxed| *boxed)
-    }
+pub trait Context: Clone + Send + Sync + 'static {
+    fn get_db_conn(&self)
+    -> impl Future<Output = Result<PoolConnection<Postgres>, ErrCode>> + Send;
+    fn get_db_tx(
+        &self,
+    ) -> impl Future<Output = Result<Transaction<'static, Postgres>, ErrCode>> + Send;
+    fn get_db_pool(&self) -> &sqlx::PgPool;
+    fn get_redis_client(&self) -> &redis::Client;
+    fn get_user(&self) -> &Option<CacheUser>;
+    fn can_access(&self, operate: PermissionPoints) -> Result<bool, ErrCode>;
 }
 
 #[derive(Clone)]
-pub struct Context {
+pub struct GlobalContext {
     pool: sqlx::PgPool,
     redis: redis::Client,
-    storage: TypedStorage,
+    perm: PermissionRegistry,
 }
 
 #[allow(dead_code)]
-impl Context {
-    pub fn new(pool: sqlx::PgPool, redis: redis::Client) -> Self {
-        Self {
-            pool,
-            redis,
-            storage: TypedStorage::new(),
-        }
-    }
-
-    pub fn get_db_pool(&self) -> &sqlx::PgPool {
+impl Context for GlobalContext {
+    fn get_db_pool(&self) -> &sqlx::PgPool {
         &self.pool
     }
 
-    pub fn get_redis_client(&self) -> &redis::Client {
+    fn get_redis_client(&self) -> &redis::Client {
         &self.redis
     }
 
-    pub async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, ErrCode> {
+    async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, ErrCode> {
         self.pool.acquire().await.map_err(|e| {
             tracing::error!("Failed to get database connection: {}", e);
             ErrCode::InternalError
         })
     }
 
-    pub async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, ErrCode> {
+    async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, ErrCode> {
         self.pool.begin().await.map_err(|e| {
             tracing::error!("Failed to get database transaction: {}", e);
             ErrCode::InternalError
         })
     }
 
-    // 代理到 storage 的方法
-    pub fn insert<T: 'static + Send + Sync + Clone>(&self, value: T) {
-        self.storage.insert(value);
+    fn get_user(&self) -> &Option<CacheUser> {
+        &None
     }
 
-    pub fn get<T: 'static + Send + Sync + Clone>(&self) -> Option<T> {
-        self.storage.get()
+    fn can_access(&self, _operate: PermissionPoints) -> Result<bool, ErrCode> {
+        Err(ErrCode::UnPermission)
+    }
+}
+
+impl GlobalContext {
+    pub fn new(pool: sqlx::PgPool, redis: redis::Client) -> Self {
+        Self {
+            pool,
+            redis,
+            perm: PermissionRegistry::default(),
+        }
     }
 
-    pub fn with_mut<T: 'static + Send + Sync, F, R>(&self, f: F) -> Option<R>
-    where
-        F: FnOnce(&mut T) -> R,
-    {
-        self.storage.with_mut(f)
+    pub fn set_perm(&mut self, perm: PermissionRegistry) {
+        self.perm = perm;
+    }
+}
+
+#[derive(Clone)]
+pub struct RequestContext {
+    global_ctx: GlobalContext,
+    user: Option<CacheUser>,
+}
+
+impl RequestContext {
+    pub fn new(ctx: GlobalContext) -> Self {
+        Self {
+            global_ctx: ctx,
+            user: None,
+        }
+    }
+
+    pub fn set_user(&mut self, user: CacheUser) {
+        self.user = Some(user);
+    }
+}
+
+impl Context for RequestContext {
+    async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, ErrCode> {
+        self.global_ctx.get_db_conn().await
+    }
+
+    async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, ErrCode> {
+        self.global_ctx.get_db_tx().await
+    }
+
+    fn get_db_pool(&self) -> &sqlx::PgPool {
+        self.global_ctx.get_db_pool()
+    }
+
+    fn get_redis_client(&self) -> &redis::Client {
+        self.global_ctx.get_redis_client()
+    }
+
+    fn get_user(&self) -> &Option<CacheUser> {
+        &self.user
     }
 
     // 验证权限
-    pub fn can_access(&self, operate: PermissionPoints) -> Result<bool, ErrCode> {
-        let pr = self
-            .get::<PermissionRegistry>()
+    fn can_access(&self, operate: PermissionPoints) -> Result<bool, ErrCode> {
+        let map = self
+            .global_ctx
+            .perm
+            .get(&operate)
             .ok_or(ErrCode::InternalError)?;
-        let map = pr.get(&operate).ok_or(ErrCode::InternalError)?;
 
-        let can_access = match self.get::<CacheUser>() {
+        let can_access = match &self.user {
             Some(user) => user
                 .role_ids
                 .iter()
@@ -125,19 +129,5 @@ impl Context {
         };
 
         can_access.then_some(true).ok_or(ErrCode::UnPermission)
-    }
-}
-
-impl<S> FromRequestParts<S> for Context
-where
-    S: Send + Sync + Any,
-{
-    type Rejection = response::Resp<()>;
-
-    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        (state as &dyn Any)
-            .downcast_ref::<Context>()
-            .cloned()
-            .ok_or(make_response(Err(ErrCode::InternalError)))
     }
 }

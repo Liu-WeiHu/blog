@@ -7,22 +7,19 @@ use crate::{
 };
 
 pub trait UserExtService: Send + Sync + Clone {
-    fn one(
-        &self,
-        user_id: i32,
-    ) -> impl std::future::Future<Output = Result<UserExt, ErrCode>> + std::marker::Send;
+    fn one(&self, user_id: i32) -> impl Future<Output = Result<UserExt, ErrCode>> + Send;
 }
 
 #[derive(Clone)]
-struct UserExtServiceI {
-    ctx: Context,
+struct UserExtServiceI<Ctx: Context> {
+    ctx: Ctx,
 }
 
-pub fn new_user_ext_service(ctx: Context) -> impl UserExtService {
+pub fn new_user_ext_service<Ctx: Context>(ctx: Ctx) -> impl UserExtService {
     UserExtServiceI { ctx }
 }
 
-impl UserExtService for UserExtServiceI {
+impl<Ctx: Context> UserExtService for UserExtServiceI<Ctx> {
     #[tracing::instrument(skip(self), fields(user_id = %user_id))]
     async fn one(&self, user_id: i32) -> Result<UserExt, ErrCode> {
         tracing::debug!("get user_ext");

@@ -27,7 +27,7 @@ pub async fn get_redis_client() -> Client {
     redis::Client::open(redis_url).expect("redis connect is error")
 }
 
-pub async fn cache_rbac(ctx: Context) -> PermissionRegistry {
+pub async fn cache_rbac<C: Context>(ctx: C) -> PermissionRegistry {
     new_rbac_service(ctx)
         .get_rbac_permission()
         .await

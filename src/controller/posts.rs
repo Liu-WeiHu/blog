@@ -1,7 +1,7 @@
-use axum::{Json, extract::Path, response::IntoResponse};
+use axum::{Extension, Json, extract::Path, response::IntoResponse};
 
 use crate::{
-    context::Context,
+    context::RequestContext,
     dto::posts::AddPostsReq,
     model::posts::Posts,
     pagination::Pagination,
@@ -9,20 +9,29 @@ use crate::{
     service::posts::{PostsService, new_posts_service},
 };
 
-pub async fn list(ctx: Context, pagination: Pagination) -> impl IntoResponse {
+pub async fn list(
+    Extension(ctx): Extension<RequestContext>,
+    pagination: Pagination,
+) -> impl IntoResponse {
     let svc = new_posts_service(ctx);
     let res = svc.list(pagination).await;
     response::make_response(res)
 }
 
 // #[axum::debug_handler]
-pub async fn one(ctx: Context, Path(id): Path<i32>) -> impl IntoResponse {
+pub async fn one(
+    Extension(ctx): Extension<RequestContext>,
+    // Path(id): Path<i32>,
+) -> impl IntoResponse {
     let svc = new_posts_service(ctx);
-    let res = svc.one(id).await;
+    let res = svc.one(1).await;
     response::make_response(res)
 }
 
-pub async fn add(ctx: Context, Json(req): Json<AddPostsReq>) -> impl IntoResponse {
+pub async fn add(
+    Extension(ctx): Extension<RequestContext>,
+    Json(req): Json<AddPostsReq>,
+) -> impl IntoResponse {
     let svc = new_posts_service(ctx);
     let posts = Posts {
         title: req.title,
@@ -34,7 +43,7 @@ pub async fn add(ctx: Context, Json(req): Json<AddPostsReq>) -> impl IntoRespons
 }
 
 pub async fn edit(
-    ctx: Context,
+    Extension(ctx): Extension<RequestContext>,
     Path(id): Path<i32>,
     Json(req): Json<AddPostsReq>,
 ) -> impl IntoResponse {

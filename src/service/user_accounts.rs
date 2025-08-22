@@ -27,37 +27,34 @@ pub trait UserAccountsService: Send + Sync + Clone {
     fn list(
         &self,
         pag: Pagination,
-    ) -> impl std::future::Future<Output = Result<Vec<UserAccounts>, ErrCode>> + std::marker::Send;
-    fn one(
-        &self,
-        user_id: i32,
-    ) -> impl std::future::Future<Output = Result<UserInfo, ErrCode>> + std::marker::Send;
+    ) -> impl Future<Output = Result<Vec<UserAccounts>, ErrCode>> + Send;
+    fn one(&self, user_id: i32) -> impl Future<Output = Result<UserInfo, ErrCode>> + Send;
     fn register(
         &self,
         req: RegisterReq,
-    ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserAccounts, ErrCode>> + Send;
     fn login(
         &self,
         email: Cow<'static, str>,
         password: Cow<'static, str>,
-    ) -> impl std::future::Future<Output = Result<AuthBody, ErrCode>> + std::marker::Send;
+    ) -> impl std::future::Future<Output = Result<AuthBody, ErrCode>> + Send;
     fn edit_info(
         &self,
         req: RegisterReq,
         user_id: i32,
-    ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + std::marker::Send;
+    ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + Send;
 }
 
 #[derive(Clone)]
-struct UserAccountsServiceI {
-    ctx: Context,
+struct UserAccountsServiceI<Ctx: Context> {
+    ctx: Ctx,
 }
 
-pub fn new_user_accounts_service(ctx: Context) -> impl UserAccountsService {
+pub fn new_user_accounts_service<Ctx: Context>(ctx: Ctx) -> impl UserAccountsService {
     UserAccountsServiceI { ctx }
 }
 
-impl UserAccountsServiceI {
+impl<Ctx: Context> UserAccountsServiceI<Ctx> {
     /// 生成JWT令牌
     fn generate_token(&self, user_id: i32, now: i64) -> Result<String, ErrCode> {
         let claims = Claims {
@@ -74,7 +71,7 @@ impl UserAccountsServiceI {
     async fn cache_user_info(&self, user: &CacheUser) -> Result<(), ErrCode> {
         let redis_key = format!("user:{}", user.id);
         let user_json = serde_json::to_string(user)
-            .map_err(|err| handle_error(Box::new(err), "cache_user_info"))?;
+            .map_err(|err| handle_error(Box::new(err), "cache_user json to string"))?;
 
         let _: () = self
             .ctx
@@ -87,7 +84,7 @@ impl UserAccountsServiceI {
     }
 }
 
-impl UserAccountsService for UserAccountsServiceI {
+impl<Ctx: Context> UserAccountsService for UserAccountsServiceI<Ctx> {
     #[tracing::instrument(skip(self), fields(offset = pag.offset, limit = pag.limit))]
     async fn list(&self, pag: Pagination) -> Result<Vec<UserAccounts>, ErrCode> {
         tracing::debug!("Listing users with pagination");

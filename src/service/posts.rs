@@ -1,7 +1,6 @@
 use crate::{
     context::Context,
     dao::posts::{PostsDao, new_posts_dao},
-    dto::user_accounts::CacheUser,
     model::posts::Posts,
     pagination::Pagination,
     rbac::PermissionPoints,
@@ -13,32 +12,26 @@ pub trait PostsService: Send + Sync + Clone {
     fn list(
         &self,
         pag: Pagination,
-    ) -> impl std::future::Future<Output = Result<Vec<Posts>, ErrCode>> + std::marker::Send;
-    fn one(
-        &self,
-        id: i32,
-    ) -> impl std::future::Future<Output = Result<Posts, ErrCode>> + std::marker::Send;
+    ) -> impl std::future::Future<Output = Result<Vec<Posts>, ErrCode>> + Send;
+    fn one(&self, id: i32) -> impl std::future::Future<Output = Result<Posts, ErrCode>> + Send;
     fn edit(
         &self,
         req: Posts,
         id: i32,
-    ) -> impl std::future::Future<Output = Result<Posts, ErrCode>> + std::marker::Send;
-    fn add(
-        &self,
-        req: Posts,
-    ) -> impl std::future::Future<Output = Result<Posts, ErrCode>> + std::marker::Send;
+    ) -> impl std::future::Future<Output = Result<Posts, ErrCode>> + Send;
+    fn add(&self, req: Posts) -> impl std::future::Future<Output = Result<Posts, ErrCode>> + Send;
 }
 
 #[derive(Clone)]
-struct PostsServiceI {
-    ctx: Context,
+struct PostsServiceI<Ctx: Context> {
+    ctx: Ctx,
 }
 
-pub fn new_posts_service(ctx: Context) -> impl PostsService {
+pub fn new_posts_service<Ctx: Context>(ctx: Ctx) -> impl PostsService {
     PostsServiceI { ctx }
 }
 
-impl PostsService for PostsServiceI {
+impl<Ctx: Context> PostsService for PostsServiceI<Ctx> {
     #[tracing::instrument(skip(self), fields(offset = pag.offset, limit = pag.limit))]
     async fn list(&self, pag: Pagination) -> Result<Vec<Posts>, ErrCode> {
         tracing::debug!("Listing posts with pagination");
@@ -73,8 +66,8 @@ impl PostsService for PostsServiceI {
         }
 
         req.id = id;
-        let user = self.ctx.get::<CacheUser>().ok_or(ErrCode::InternalError)?;
 
+        let user = self.ctx.get_user().as_ref().ok_or(ErrCode::UnAuthorized)?;
         req.user_id = user.id;
         let mut conn = self.ctx.get_db_conn().await?;
         new_posts_dao()
@@ -89,8 +82,8 @@ impl PostsService for PostsServiceI {
         tracing::debug!("Create posts");
 
         self.ctx.can_access(PermissionPoints::CreatePost)?;
-        let user = self.ctx.get::<CacheUser>().ok_or(ErrCode::InternalError)?;
 
+        let user = self.ctx.get_user().as_ref().ok_or(ErrCode::UnAuthorized)?;
         let mut conn = self.ctx.get_db_conn().await?;
         req.user_id = user.id;
         new_posts_dao()

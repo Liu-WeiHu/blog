@@ -34,7 +34,7 @@ pub struct UserInfo {
     pub address: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct CacheUser {
     pub id: i32,
     pub username: Cow<'static, str>,

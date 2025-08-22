@@ -7,17 +7,17 @@ pub trait UserExtDao: Send + Sync {
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl std::future::Future<Output = Result<UserExt, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserExt, sqlx::Error>> + Send;
     fn insert(
         &self,
         executor: &mut PgConnection,
         user: UserExt,
-    ) -> impl std::future::Future<Output = Result<UserExt, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserExt, sqlx::Error>> + Send;
     fn update_by_user_id(
         &self,
         executor: &mut PgConnection,
         user: UserExt,
-    ) -> impl std::future::Future<Output = Result<UserExt, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserExt, sqlx::Error>> + Send;
 }
 
 struct UserExtDaoI;

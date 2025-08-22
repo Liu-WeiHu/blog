@@ -11,24 +11,20 @@ use crate::{
 pub trait RbacService: Send + Sync + Clone {
     fn get_rbac_permission(
         &self,
-    ) -> impl std::future::Future<Output = Result<PermissionRegistry, ErrCode>> + std::marker::Send;
-
-    fn get_user_permission(
-        &self,
-        user_id: i32,
-    ) -> impl std::future::Future<Output = Result<Vec<String>, ErrCode>> + std::marker::Send;
+    ) -> impl Future<Output = Result<PermissionRegistry, ErrCode>> + Send;
+    fn get_user_permission(&self) -> impl Future<Output = Result<Vec<String>, ErrCode>> + Send;
 }
 
 #[derive(Clone)]
-struct RbacServiceI {
-    ctx: Context,
+struct RbacServiceI<Ctx: Context> {
+    ctx: Ctx,
 }
 
-pub fn new_rbac_service(ctx: Context) -> impl RbacService {
+pub fn new_rbac_service<Ctx: Context>(ctx: Ctx) -> impl RbacService {
     RbacServiceI { ctx }
 }
 
-impl RbacService for RbacServiceI {
+impl<Ctx: Context> RbacService for RbacServiceI<Ctx> {
     async fn get_rbac_permission(&self) -> Result<PermissionRegistry, ErrCode> {
         tracing::debug!("get_rbac_permission start handle");
 
@@ -50,13 +46,17 @@ impl RbacService for RbacServiceI {
         Ok(Arc::new(map))
     }
 
-    #[tracing::instrument(skip(self), fields(user_id = %user_id))]
-    async fn get_user_permission(&self, user_id: i32) -> Result<Vec<String>, ErrCode> {
-        tracing::debug!("get_user_permission start handle");
+    async fn get_user_permission(&self) -> Result<Vec<String>, ErrCode> {
+        tracing::debug!("get_user_permission start handle ");
+
+        let user = match self.ctx.get_user() {
+            Some(user) => user,
+            None => return Ok(Vec::new()),
+        };
 
         let mut conn = self.ctx.get_db_conn().await?;
         new_rbac_dao()
-            .select_permissions_by_user_id(&mut conn, user_id)
+            .select_permissions_by_user_id(&mut conn, user.id)
             .await
             .map_err(|err| handle_error(Box::new(err), "dao select_permissions_by_user_id"))
     }

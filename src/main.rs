@@ -1,4 +1,4 @@
-use crate::context::Context;
+use crate::context::GlobalContext;
 
 mod context;
 mod controller;
@@ -19,9 +19,9 @@ async fn main() {
     tracing_subscriber::fmt::init();
     let pool = init::get_db_pool().await;
     let redis = init::get_redis_client().await;
-    let ctx = Context::new(pool, redis);
-    let rbac = init::cache_rbac(ctx.clone()).await;
-    ctx.insert(rbac);
+    let mut ctx = GlobalContext::new(pool, redis);
+    let perm = init::cache_rbac(ctx.clone()).await;
+    ctx.set_perm(perm);
     let app = route::new_route(ctx);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await

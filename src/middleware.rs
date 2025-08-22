@@ -10,7 +10,7 @@ use axum::{
 use redis::Commands;
 
 use crate::{
-    context::Context,
+    context::{Context, GlobalContext, RequestContext},
     dto::user_accounts::CacheUser,
     init::KEYS,
     jwt::Claims,
@@ -18,10 +18,12 @@ use crate::{
 };
 
 pub async fn auth_middleware(
-    State(ctx): State<Context>,
-    req: Request,
+    State(ctx): State<GlobalContext>,
+    mut req: Request,
     next: middleware::Next,
 ) -> impl IntoResponse {
+    let mut request_ctx = RequestContext::new(ctx.clone());
+
     // 如果有auth头就校验,没有就跳过
     if let Some(header) = req.headers().get("authorization") {
         let token = match header.to_str() {
@@ -117,9 +119,9 @@ pub async fn auth_middleware(
                     .into_response();
             }
         };
-
-        ctx.insert(cache_user);
+        request_ctx.set_user(cache_user);
     }
+    req.extensions_mut().insert(request_ctx);
     next.run(req).await
 }
 

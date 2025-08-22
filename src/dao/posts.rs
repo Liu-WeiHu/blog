@@ -9,22 +9,22 @@ pub trait PostsDao: Send + Sync {
         executor: &mut PgConnection,
         offset: i64,
         limit: i64,
-    ) -> impl std::future::Future<Output = Result<Vec<Posts>, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<Vec<Posts>, sqlx::Error>> + Send;
     fn select_one(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl std::future::Future<Output = Result<Posts, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<Posts, sqlx::Error>> + Send;
     fn insert(
         &self,
         executor: &mut PgConnection,
         posts: Posts,
-    ) -> impl std::future::Future<Output = Result<Posts, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<Posts, sqlx::Error>> + Send;
     fn update(
         &self,
         executor: &mut PgConnection,
         posts: Posts,
-    ) -> impl std::future::Future<Output = Result<Posts, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<Posts, sqlx::Error>> + Send;
 }
 
 struct PostsDaoI;

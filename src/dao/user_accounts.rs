@@ -11,37 +11,37 @@ pub trait UserAccountsDao: Send + Sync {
         executor: &mut PgConnection,
         offset: i64,
         limit: i64,
-    ) -> impl std::future::Future<Output = Result<Vec<UserAccounts>, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<Vec<UserAccounts>, sqlx::Error>> + Send;
     fn select_one(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl std::future::Future<Output = Result<UserAccounts, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
     fn select_by_id(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl std::future::Future<Output = Result<UserInfo, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserInfo, sqlx::Error>> + Send;
     fn insert(
         &self,
         executor: &mut PgConnection,
         user: UserAccounts,
-    ) -> impl std::future::Future<Output = Result<UserAccounts, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
     fn select_by_email(
         &self,
         executor: &mut PgConnection,
         email: Cow<'static, str>,
-    ) -> impl std::future::Future<Output = Result<UserAccounts, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
     fn update_login_time_by_id(
         &self,
         executor: &mut PgConnection,
         user: UserAccounts,
-    ) -> impl std::future::Future<Output = Result<UserAccounts, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
     fn update(
         &self,
         executor: &mut PgConnection,
         user: UserAccounts,
-    ) -> impl std::future::Future<Output = Result<UserAccounts, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
 }
 
 struct UserAccountsDaoI;

@@ -10,20 +10,19 @@ pub trait RbacDao: Send + Sync {
     fn select_role_permission(
         &self,
         executor: &mut PgConnection,
-    ) -> impl std::future::Future<Output = Result<Vec<RbacRolePermission>, sqlx::Error>>
-    + std::marker::Send;
+    ) -> impl Future<Output = Result<Vec<RbacRolePermission>, sqlx::Error>> + Send;
 
     fn select_permissions_by_user_id(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl std::future::Future<Output = Result<Vec<String>, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<Vec<String>, sqlx::Error>> + Send;
 
     fn select_user_role_by_user_id(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl std::future::Future<Output = Result<Vec<UserRole>, sqlx::Error>> + std::marker::Send;
+    ) -> impl Future<Output = Result<Vec<UserRole>, sqlx::Error>> + Send;
 }
 
 struct RbacDaoI;
