@@ -1,21 +1,26 @@
+use std::sync::Arc;
+
 use sqlx::{Postgres, Transaction, pool::PoolConnection};
+use async_trait::async_trait;
 
 use crate::{
     dto::user_accounts::CacheUser,
-    rbac::{ANONYMOUS, PermissionPoints, PermissionRegistry},
+    rbac::{PermissionPoints, PermissionRegistry},
     response::ErrCode,
 };
 
+#[allow(dead_code)]
 pub trait Context: Clone + Send + Sync + 'static {
-    fn get_db_conn(&self)
-    -> impl Future<Output = Result<PoolConnection<Postgres>, ErrCode>> + Send;
-    fn get_db_tx(
-        &self,
-    ) -> impl Future<Output = Result<Transaction<'static, Postgres>, ErrCode>> + Send;
     fn get_db_pool(&self) -> &sqlx::PgPool;
     fn get_redis_client(&self) -> &redis::Client;
-    fn get_user(&self) -> &Option<CacheUser>;
+    fn get_user(&self) -> Option<CacheUser>;
     fn can_access(&self, operate: PermissionPoints) -> Result<bool, ErrCode>;
+}
+
+#[async_trait]
+pub trait AsyncContext: Context {
+    async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, ErrCode>;
+    async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, ErrCode>;
 }
 
 #[derive(Clone)]
@@ -35,6 +40,17 @@ impl Context for GlobalContext {
         &self.redis
     }
 
+    fn get_user(&self) -> Option<CacheUser> {
+        None
+    }
+
+    fn can_access(&self, _operate: PermissionPoints) -> Result<bool, ErrCode> {
+        Err(ErrCode::UnPermission)
+    }
+}
+
+#[async_trait]
+impl AsyncContext for GlobalContext {
     async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, ErrCode> {
         self.pool.acquire().await.map_err(|e| {
             tracing::error!("Failed to get database connection: {}", e);
@@ -47,14 +63,6 @@ impl Context for GlobalContext {
             tracing::error!("Failed to get database transaction: {}", e);
             ErrCode::InternalError
         })
-    }
-
-    fn get_user(&self) -> &Option<CacheUser> {
-        &None
-    }
-
-    fn can_access(&self, _operate: PermissionPoints) -> Result<bool, ErrCode> {
-        Err(ErrCode::UnPermission)
     }
 }
 
@@ -74,14 +82,14 @@ impl GlobalContext {
 
 #[derive(Clone)]
 pub struct RequestContext {
-    global_ctx: GlobalContext,
+    global_ctx: Arc<GlobalContext>,
     user: Option<CacheUser>,
 }
 
 impl RequestContext {
     pub fn new(ctx: GlobalContext) -> Self {
         Self {
-            global_ctx: ctx,
+            global_ctx: Arc::new(ctx),
             user: None,
         }
     }
@@ -92,14 +100,6 @@ impl RequestContext {
 }
 
 impl Context for RequestContext {
-    async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, ErrCode> {
-        self.global_ctx.get_db_conn().await
-    }
-
-    async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, ErrCode> {
-        self.global_ctx.get_db_tx().await
-    }
-
     fn get_db_pool(&self) -> &sqlx::PgPool {
         self.global_ctx.get_db_pool()
     }
@@ -108,26 +108,34 @@ impl Context for RequestContext {
         self.global_ctx.get_redis_client()
     }
 
-    fn get_user(&self) -> &Option<CacheUser> {
-        &self.user
+    fn get_user(&self) -> Option<CacheUser> {
+        self.user.clone()
     }
 
     // 验证权限
     fn can_access(&self, operate: PermissionPoints) -> Result<bool, ErrCode> {
-        let map = self
+        let entry = self
             .global_ctx
             .perm
             .get(&operate)
             .ok_or(ErrCode::InternalError)?;
 
-        let can_access = match &self.user {
-            Some(user) => user
-                .role_ids
-                .iter()
-                .any(|role_id| map.contains_key(role_id)),
-            None => map.values().any(|x| *x == ANONYMOUS),
+        let allowed = match &self.user {
+            Some(user) => user.role_ids.iter().any(|rid| entry.role_ids.contains(rid)),
+            None => entry.allow_anonymous,
         };
 
-        can_access.then_some(true).ok_or(ErrCode::UnPermission)
+        allowed.then_some(true).ok_or(ErrCode::UnPermission)
+    }
+}
+
+#[async_trait]
+impl AsyncContext for RequestContext {
+    async fn get_db_conn(&self) -> Result<PoolConnection<Postgres>, ErrCode> {
+        self.global_ctx.get_db_conn().await
+    }
+
+    async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, ErrCode> {
+        self.global_ctx.get_db_tx().await
     }
 }

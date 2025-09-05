@@ -1,25 +1,28 @@
 use crate::{
-    context::Context,
-    dao::user_ext::{UserExtDao, new_user_ext_dao},
+    context::{AsyncContext},
+    dao::user_ext::{new_user_ext_dao, UserExtDao},
     model::user_ext::UserExt,
     response::ErrCode,
     service::handle_error,
 };
+use async_trait::async_trait;
 
+#[async_trait]
 pub trait UserExtService: Send + Sync + Clone {
-    fn one(&self, user_id: i32) -> impl Future<Output = Result<UserExt, ErrCode>> + Send;
+    async fn one(&self, user_id: i32) -> Result<UserExt, ErrCode>;
 }
 
 #[derive(Clone)]
-struct UserExtServiceI<Ctx: Context> {
+struct UserExtServiceI<Ctx: AsyncContext> {
     ctx: Ctx,
 }
 
-pub fn new_user_ext_service<Ctx: Context>(ctx: Ctx) -> impl UserExtService {
+pub fn new_user_ext_service<Ctx: AsyncContext>(ctx: Ctx) -> impl UserExtService {
     UserExtServiceI { ctx }
 }
 
-impl<Ctx: Context> UserExtService for UserExtServiceI<Ctx> {
+#[async_trait]
+impl<Ctx: AsyncContext> UserExtService for UserExtServiceI<Ctx> {
     #[tracing::instrument(skip(self), fields(user_id = %user_id))]
     async fn one(&self, user_id: i32) -> Result<UserExt, ErrCode> {
         tracing::debug!("get user_ext");

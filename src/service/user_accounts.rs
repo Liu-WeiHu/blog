@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
 use crate::{
-    context::Context,
+    context::{AsyncContext},
     dao::{
-        permission::{RbacDao, new_rbac_dao},
-        user_accounts::{UserAccountsDao, new_user_accounts_dao},
-        user_ext::{UserExtDao, new_user_ext_dao},
+        permission::{new_rbac_dao, RbacDao},
+        user_accounts::{new_user_accounts_dao, UserAccountsDao},
+        user_ext::{new_user_ext_dao, UserExtDao},
     },
     dto::user_accounts::{CacheUser, RegisterReq, UserInfo},
     init::KEYS,
@@ -22,39 +22,41 @@ use redis::Commands;
 
 const TOKEN_EXPIRE_SECONDS: i64 = 7 * 24 * 60 * 60; // 7天
 const REDIS_EXPIRE_SECONDS: u64 = 7 * 24 * 60 * 60; // 7天
+use async_trait::async_trait;
 
+#[async_trait]
 pub trait UserAccountsService: Send + Sync + Clone {
-    fn list(
+    async fn list(
         &self,
         pag: Pagination,
-    ) -> impl Future<Output = Result<Vec<UserAccounts>, ErrCode>> + Send;
-    fn one(&self, user_id: i32) -> impl Future<Output = Result<UserInfo, ErrCode>> + Send;
-    fn register(
+    ) -> Result<Vec<UserAccounts>, ErrCode>;
+    async fn one(&self, user_id: i32) -> Result<UserInfo, ErrCode>;
+    async fn register(
         &self,
         req: RegisterReq,
-    ) -> impl Future<Output = Result<UserAccounts, ErrCode>> + Send;
-    fn login(
+    ) -> Result<UserAccounts, ErrCode>;
+    async fn login(
         &self,
         email: Cow<'static, str>,
         password: Cow<'static, str>,
-    ) -> impl std::future::Future<Output = Result<AuthBody, ErrCode>> + Send;
-    fn edit_info(
+    ) -> Result<AuthBody, ErrCode>;
+    async fn edit_info(
         &self,
         req: RegisterReq,
         user_id: i32,
-    ) -> impl std::future::Future<Output = Result<UserAccounts, ErrCode>> + Send;
+    ) -> Result<UserAccounts, ErrCode>;
 }
 
 #[derive(Clone)]
-struct UserAccountsServiceI<Ctx: Context> {
+struct UserAccountsServiceI<Ctx: AsyncContext> {
     ctx: Ctx,
 }
 
-pub fn new_user_accounts_service<Ctx: Context>(ctx: Ctx) -> impl UserAccountsService {
+pub fn new_user_accounts_service<Ctx: AsyncContext>(ctx: Ctx) -> impl UserAccountsService {
     UserAccountsServiceI { ctx }
 }
 
-impl<Ctx: Context> UserAccountsServiceI<Ctx> {
+impl<Ctx: AsyncContext> UserAccountsServiceI<Ctx> {
     /// 生成JWT令牌
     fn generate_token(&self, user_id: i32, now: i64) -> Result<String, ErrCode> {
         let claims = Claims {
@@ -84,7 +86,8 @@ impl<Ctx: Context> UserAccountsServiceI<Ctx> {
     }
 }
 
-impl<Ctx: Context> UserAccountsService for UserAccountsServiceI<Ctx> {
+#[async_trait]
+impl<Ctx: AsyncContext> UserAccountsService for UserAccountsServiceI<Ctx> {
     #[tracing::instrument(skip(self), fields(offset = pag.offset, limit = pag.limit))]
     async fn list(&self, pag: Pagination) -> Result<Vec<UserAccounts>, ErrCode> {
         tracing::debug!("Listing users with pagination");

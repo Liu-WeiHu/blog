@@ -1,23 +1,25 @@
 use crate::model::user_ext::UserExt;
 
 use sqlx::PgConnection;
+use async_trait::async_trait;
 
+#[async_trait]
 pub trait UserExtDao: Send + Sync {
-    fn select_by_id(
+    async fn select_by_id(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl Future<Output = Result<UserExt, sqlx::Error>> + Send;
-    fn insert(
+    ) -> Result<UserExt, sqlx::Error>;
+    async fn insert(
         &self,
         executor: &mut PgConnection,
         user: UserExt,
-    ) -> impl Future<Output = Result<UserExt, sqlx::Error>> + Send;
-    fn update_by_user_id(
+    ) -> Result<UserExt, sqlx::Error>;
+    async fn update_by_user_id(
         &self,
         executor: &mut PgConnection,
         user: UserExt,
-    ) -> impl Future<Output = Result<UserExt, sqlx::Error>> + Send;
+    ) -> Result<UserExt, sqlx::Error>;
 }
 
 struct UserExtDaoI;
@@ -26,6 +28,7 @@ pub fn new_user_ext_dao() -> impl UserExtDao {
     UserExtDaoI {}
 }
 
+#[async_trait]
 impl UserExtDao for UserExtDaoI {
     async fn select_by_id(
         &self,

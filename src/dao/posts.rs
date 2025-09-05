@@ -1,30 +1,32 @@
 use sqlx::PgConnection;
 
 use crate::model::posts::Posts;
+use async_trait::async_trait;
 
 #[allow(dead_code)]
+#[async_trait]
 pub trait PostsDao: Send + Sync {
-    fn select_all(
+    async fn select_all(
         &self,
         executor: &mut PgConnection,
         offset: i64,
         limit: i64,
-    ) -> impl Future<Output = Result<Vec<Posts>, sqlx::Error>> + Send;
-    fn select_one(
+    ) -> Result<Vec<Posts>, sqlx::Error>;
+    async fn select_one(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl Future<Output = Result<Posts, sqlx::Error>> + Send;
-    fn insert(
+    ) -> Result<Posts, sqlx::Error>;
+    async fn insert(
         &self,
         executor: &mut PgConnection,
         posts: Posts,
-    ) -> impl Future<Output = Result<Posts, sqlx::Error>> + Send;
-    fn update(
+    ) -> Result<Posts, sqlx::Error>;
+    async fn update(
         &self,
         executor: &mut PgConnection,
         posts: Posts,
-    ) -> impl Future<Output = Result<Posts, sqlx::Error>> + Send;
+    ) -> Result<Posts, sqlx::Error>;
 }
 
 struct PostsDaoI;
@@ -33,6 +35,7 @@ pub fn new_posts_dao() -> impl PostsDao {
     PostsDaoI {}
 }
 
+#[async_trait]
 impl PostsDao for PostsDaoI {
     async fn select_all(
         &self,

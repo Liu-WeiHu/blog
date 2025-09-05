@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+async-trait = "0.1.89"
 axum = { version = "0.8.4", features = ["macros"] }
 bcrypt = "0.17.0"
 chrono = { version = "0.4.41", features = ["serde"] }
