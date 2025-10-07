@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
 use crate::{
-    context::{AsyncContext},
+    context::AsyncContext,
     dao::{
         permission::{new_rbac_dao, RbacDao},
         user_accounts::{new_user_accounts_dao, UserAccountsDao},
         user_ext::{new_user_ext_dao, UserExtDao},
     },
-    dto::user_accounts::{CacheUser, RegisterReq, UserInfo},
+    dto::user_accounts::{CacheUser, RegisterReq, UserInfo, UserListResp},
     init::KEYS,
     jwt::{AuthBody, Claims},
     model::{user_accounts::UserAccounts, user_ext::UserExt},
@@ -29,7 +29,7 @@ pub trait UserAccountsService: Send + Sync + Clone {
     async fn list(
         &self,
         pag: Pagination,
-    ) -> Result<Vec<UserAccounts>, ErrCode>;
+    ) -> Result<UserListResp, ErrCode>;
     async fn one(&self, user_id: i32) -> Result<UserInfo, ErrCode>;
     async fn register(
         &self,
@@ -89,14 +89,16 @@ impl<Ctx: AsyncContext> UserAccountsServiceI<Ctx> {
 #[async_trait]
 impl<Ctx: AsyncContext> UserAccountsService for UserAccountsServiceI<Ctx> {
     #[tracing::instrument(skip(self), fields(offset = pag.offset, limit = pag.limit))]
-    async fn list(&self, pag: Pagination) -> Result<Vec<UserAccounts>, ErrCode> {
+    async fn list(&self, pag: Pagination) -> Result<UserListResp, ErrCode> {
         tracing::debug!("Listing users with pagination");
 
         let mut conn = self.ctx.get_db_conn().await?;
-        new_user_accounts_dao()
+        let list = new_user_accounts_dao()
             .select_all(&mut conn, pag.offset, pag.limit)
             .await
-            .map_err(|err| handle_error(Box::new(err), "dao select_all"))
+            .map_err(|err| handle_error(Box::new(err), "dao select_all"))?;
+        let total = list.first().map_or(0, |user| user.total.unwrap_or_default());
+        Ok(UserListResp { users: list, total: total })
     }
 
     #[tracing::instrument(skip(self), fields(user_id = %user_id))]

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update posts set title = $1, content = $2 where id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d520850cd09c7c1d9821ae06400a0de316e292d276c71bca2269bd4369c7ed10"
+}

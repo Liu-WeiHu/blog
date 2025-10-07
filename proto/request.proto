@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package proto_api;
+
+// 获取一个用户信息入参
+message GetUserOneRequest {
+  int32 id = 1;
+};
+
+// 注册用户入参
+message RegisterUserRequest {
+  string username = 1;
+  string password = 2;
+  string email = 3;
+  optional int32 age = 4;
+  optional string gender = 5;
+  optional string education = 6;
+  optional string hometown = 7;
+  optional string address = 8;
+};
+
+// 编辑用户入参
+message EditUserRequest {
+  int32 id = 1;
+  RegisterUserRequest user = 2;
+};
+
+// 登录入参
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+};

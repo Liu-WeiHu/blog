@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update user_ext set age = $1, gender = $2, education = $3, hometown = $4, address = $5 where user_id = $6",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dd20060e5e25c550ef33d48e5741b615743022f0decae0342e5039f06e1bfca4"
+}

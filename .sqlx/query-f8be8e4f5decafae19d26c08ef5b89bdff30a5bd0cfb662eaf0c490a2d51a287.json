@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update user_accounts set last_login_time = $1 where id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f8be8e4f5decafae19d26c08ef5b89bdff30a5bd0cfb662eaf0c490a2d51a287"
+}

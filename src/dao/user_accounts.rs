@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{dto::user_accounts::UserInfo, model::user_accounts::UserAccounts};
+use crate::{dto::user_accounts::{UserInfo, UserItem}, model::user_accounts::UserAccounts};
 
 use sqlx::PgConnection;
 use async_trait::async_trait;
@@ -13,7 +13,7 @@ pub trait UserAccountsDao: Send + Sync {
         executor: &mut PgConnection,
         offset: i64,
         limit: i64,
-    ) -> Result<Vec<UserAccounts>, sqlx::Error>;
+    ) -> Result<Vec<UserItem>, sqlx::Error>;
     async fn select_one(
         &self,
         executor: &mut PgConnection,
@@ -59,10 +59,10 @@ impl UserAccountsDao for UserAccountsDaoI {
         executor: &mut PgConnection,
         offset: i64,
         limit: i64,
-    ) -> Result<Vec<UserAccounts>, sqlx::Error> {
+    ) -> Result<Vec<UserItem>, sqlx::Error> {
         sqlx::query_as!(
-            UserAccounts,
-            "select * from user_accounts limit $1 offset $2",
+            UserItem,
+            "select id, username, email, created_at, last_login_time, COUNT(*) OVER() as total from user_accounts order by id limit $1 offset $2",
             limit,
             offset
         )

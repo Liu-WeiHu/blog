@@ -43,3 +43,20 @@ pub struct CacheUser {
     pub last_login_time: Option<NaiveDateTime>,
     pub role_ids: Vec<i32>,
 }
+
+#[derive(Serialize)]
+pub struct UserListResp {
+    pub users: Vec<UserItem>,
+    pub total: i64,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct UserItem {
+    pub id: i32,
+    pub username: Cow<'static, str>,
+    pub email: Cow<'static, str>,
+    pub created_at: Option<NaiveDateTime>,
+    pub last_login_time: Option<NaiveDateTime>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub total: Option<i64>,
+}

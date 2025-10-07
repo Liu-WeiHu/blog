@@ -1,0 +1,25 @@
+syntax = "proto3";
+package proto_api;
+
+import "google/protobuf/timestamp.proto";
+
+// 用户信息返回
+message UserResponse {
+  int32 id = 1;
+  string username = 2;
+  string email = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp last_login_time = 5;
+};
+
+// 用户列表返回
+message GetListResponse {
+  repeated UserResponse users = 1;
+  int64 total = 2;
+};
+
+// 登录返回
+message AuthBodyResponse {
+  string accessToken = 1;
+  string tokenType = 2;
+};

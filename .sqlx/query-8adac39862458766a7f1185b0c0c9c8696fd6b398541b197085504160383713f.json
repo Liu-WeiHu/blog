@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select p.name as permission_name from user_roles ur \njoin role_permissions rp on ur.role_id = rp.role_id\njoin permissions p on rp.permission_id = p.id\nwhere ur.user_id = $1 and p.permission_type = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "permission_name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8adac39862458766a7f1185b0c0c9c8696fd6b398541b197085504160383713f"
+}
