@@ -1,3 +1,4 @@
+
 use crate::response::{self, ErrCode, Resp};
 
 use axum::extract::{FromRequest, Json, Request};
@@ -41,5 +42,14 @@ where
         }
         let offset = (page - 1) * limit;
         Ok(Pagination { offset, limit })
+    }
+}
+
+impl PageParams {
+    pub fn to_pagination(&self) -> Pagination {
+        let limit = self.size.unwrap_or(10);
+        let page = self.page.unwrap_or(1);
+        let offset = (page - 1) * limit;
+        Pagination { offset, limit }
     }
 }

@@ -3,9 +3,9 @@
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Pagination {
     #[prost(int64, tag = "1")]
-    pub offset: i64,
+    pub page: i64,
     #[prost(int64, tag = "2")]
-    pub limit: i64,
+    pub size: i64,
 }
 /// 获取一个用户信息入参
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
@@ -49,7 +49,6 @@ pub struct LoginRequest {
     #[prost(string, tag = "2")]
     pub password: ::prost::alloc::string::String,
 }
-/// 用户信息返回
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UserResponse {
     #[prost(int32, tag = "1")]
@@ -63,7 +62,16 @@ pub struct UserResponse {
     #[prost(message, optional, tag = "5")]
     pub last_login_time: ::core::option::Option<::prost_types::Timestamp>,
 }
-/// 用户列表返回
+/// 用户信息返回
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UserOneResponse {
+    #[prost(int32, tag = "1")]
+    pub code: i32,
+    #[prost(string, tag = "2")]
+    pub msg: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "3")]
+    pub data: ::core::option::Option<UserResponse>,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetListResponse {
     #[prost(message, repeated, tag = "1")]
@@ -71,13 +79,32 @@ pub struct GetListResponse {
     #[prost(int64, tag = "2")]
     pub total: i64,
 }
-/// 登录返回
+/// 用户列表返回
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListResponse {
+    #[prost(int32, tag = "1")]
+    pub code: i32,
+    #[prost(string, tag = "2")]
+    pub msg: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "3")]
+    pub data: ::core::option::Option<GetListResponse>,
+}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AuthBodyResponse {
     #[prost(string, tag = "1")]
     pub access_token: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
     pub token_type: ::prost::alloc::string::String,
+}
+/// 登录返回
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AuthResponse {
+    #[prost(int32, tag = "1")]
+    pub code: i32,
+    #[prost(string, tag = "2")]
+    pub msg: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "3")]
+    pub data: ::core::option::Option<AuthBodyResponse>,
 }
 /// Generated server implementations.
 pub mod api_service_server {
@@ -95,26 +122,23 @@ pub mod api_service_server {
         async fn list(
             &self,
             request: tonic::Request<super::Pagination>,
-        ) -> std::result::Result<tonic::Response<super::GetListResponse>, tonic::Status>;
+        ) -> std::result::Result<tonic::Response<super::ListResponse>, tonic::Status>;
         async fn one(
             &self,
             request: tonic::Request<super::GetUserOneRequest>,
-        ) -> std::result::Result<tonic::Response<super::UserResponse>, tonic::Status>;
+        ) -> std::result::Result<tonic::Response<super::UserOneResponse>, tonic::Status>;
         async fn register(
             &self,
             request: tonic::Request<super::RegisterUserRequest>,
-        ) -> std::result::Result<tonic::Response<super::UserResponse>, tonic::Status>;
+        ) -> std::result::Result<tonic::Response<super::UserOneResponse>, tonic::Status>;
         async fn edit(
             &self,
             request: tonic::Request<super::EditUserRequest>,
-        ) -> std::result::Result<tonic::Response<super::UserResponse>, tonic::Status>;
+        ) -> std::result::Result<tonic::Response<super::UserOneResponse>, tonic::Status>;
         async fn login(
             &self,
             request: tonic::Request<super::LoginRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::AuthBodyResponse>,
-            tonic::Status,
-        >;
+        ) -> std::result::Result<tonic::Response<super::AuthResponse>, tonic::Status>;
     }
     #[derive(Debug)]
     pub struct ApiServiceServer<T> {
@@ -197,7 +221,7 @@ pub mod api_service_server {
                     struct ListSvc<T: ApiService>(pub Arc<T>);
                     impl<T: ApiService> tonic::server::UnaryService<super::Pagination>
                     for ListSvc<T> {
-                        type Response = super::GetListResponse;
+                        type Response = super::ListResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -242,7 +266,7 @@ pub mod api_service_server {
                         T: ApiService,
                     > tonic::server::UnaryService<super::GetUserOneRequest>
                     for OneSvc<T> {
-                        type Response = super::UserResponse;
+                        type Response = super::UserOneResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -287,7 +311,7 @@ pub mod api_service_server {
                         T: ApiService,
                     > tonic::server::UnaryService<super::RegisterUserRequest>
                     for RegisterSvc<T> {
-                        type Response = super::UserResponse;
+                        type Response = super::UserOneResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -332,7 +356,7 @@ pub mod api_service_server {
                         T: ApiService,
                     > tonic::server::UnaryService<super::EditUserRequest>
                     for EditSvc<T> {
-                        type Response = super::UserResponse;
+                        type Response = super::UserOneResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -375,7 +399,7 @@ pub mod api_service_server {
                     struct LoginSvc<T: ApiService>(pub Arc<T>);
                     impl<T: ApiService> tonic::server::UnaryService<super::LoginRequest>
                     for LoginSvc<T> {
-                        type Response = super::AuthBodyResponse;
+                        type Response = super::AuthResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,

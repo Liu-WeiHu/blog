@@ -1,18 +1,15 @@
 use crate::{
     context::GlobalContext,
     controller::{permission, posts, user_accounts, user_ext},
-    middleware::{auth_middleware, log_request, log_response},
 };
 
 use axum::{
     Router,
     http::StatusCode,
-    middleware,
     routing::{get, post, put},
 };
-use tower_http::trace::TraceLayer;
 
-pub fn new_route(ctx: GlobalContext) -> Router {
+pub fn new_route() -> Router {
     //  账号相关路由
     let users_route = Router::new()
         .route("/test", post(user_accounts::test_user))
@@ -44,18 +41,12 @@ pub fn new_route(ctx: GlobalContext) -> Router {
         .nest("/user_ext", user_ext_route)
         .nest("/posts", posts_route)
         .nest("/visual", permission_route)
-        .nest("/auth", login_route)
-        .layer(middleware::from_fn_with_state(ctx.clone(), auth_middleware));
+        .nest("/auth", login_route);
 
-    let api_route = Router::new().nest("/api/v1", service_route).layer(
-        TraceLayer::new_for_http()
-            .on_request(log_request)
-            .on_response(log_response),
-    );
+    let api_route = Router::new().nest("/api/v1", service_route);
 
     Router::new()
         .merge(api_route)
         .route("/", get(async || "hello, world"))
         .fallback(async || (StatusCode::NOT_FOUND, "not found!"))
-        .with_state(ctx)
 }

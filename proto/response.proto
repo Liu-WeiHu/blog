@@ -3,7 +3,7 @@ package proto_api;
 
 import "google/protobuf/timestamp.proto";
 
-// 用户信息返回
+
 message UserResponse {
   int32 id = 1;
   string username = 2;
@@ -11,15 +11,31 @@ message UserResponse {
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp last_login_time = 5;
 };
+// 用户信息返回
+message UserOneResponse {
+  int32 code = 1;
+  string msg = 2;
+  optional UserResponse data = 3;
+};
 
-// 用户列表返回
 message GetListResponse {
   repeated UserResponse users = 1;
   int64 total = 2;
 };
+// 用户列表返回
+message ListResponse {
+  int32 code = 1;
+  string msg = 2;
+  optional GetListResponse data = 3;
+};
 
-// 登录返回
 message AuthBodyResponse {
   string accessToken = 1;
   string tokenType = 2;
+};
+// 登录返回
+message AuthResponse {
+  int32 code = 1;
+  string msg = 2;
+  optional AuthBodyResponse data = 3;
 };

@@ -23,7 +23,7 @@ pub trait AsyncContext: Context {
     async fn get_db_tx(&self) -> Result<Transaction<'static, Postgres>, ErrCode>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct GlobalContext {
     pool: sqlx::PgPool,
     redis: redis::Client,
@@ -80,7 +80,7 @@ impl GlobalContext {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RequestContext {
     global_ctx: Arc<GlobalContext>,
     user: Option<CacheUser>,

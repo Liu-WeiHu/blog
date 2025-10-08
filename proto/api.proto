@@ -7,10 +7,10 @@ import "request.proto";
 import "response.proto";
 
 service ApiService {
-  rpc List (Pagination) returns (GetListResponse);
-  rpc One (GetUserOneRequest) returns (UserResponse);
-  rpc Register (RegisterUserRequest) returns (UserResponse);
-  rpc Edit (EditUserRequest) returns (UserResponse);
-  rpc Login (LoginRequest) returns (AuthBodyResponse);
+  rpc List (Pagination) returns (ListResponse);
+  rpc One (GetUserOneRequest) returns (UserOneResponse);
+  rpc Register (RegisterUserRequest) returns (UserOneResponse);
+  rpc Edit (EditUserRequest) returns (UserOneResponse);
+  rpc Login (LoginRequest) returns (AuthResponse);
 }
 
