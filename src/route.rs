@@ -1,5 +1,4 @@
 use crate::{
-    context::GlobalContext,
     controller::{permission, posts, user_accounts, user_ext},
 };
 

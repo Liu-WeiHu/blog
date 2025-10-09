@@ -7,6 +7,9 @@ pub struct Pagination {
     #[prost(int64, tag = "2")]
     pub size: i64,
 }
+/// 空结构体
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Empty {}
 /// 获取一个用户信息入参
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetUserOneRequest {
@@ -50,6 +53,35 @@ pub struct LoginRequest {
     pub password: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct OneResponse {
+    #[prost(int32, tag = "1")]
+    pub code: i32,
+    #[prost(string, tag = "2")]
+    pub username: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub email: ::prost::alloc::string::String,
+    #[prost(int32, optional, tag = "4")]
+    pub age: ::core::option::Option<i32>,
+    #[prost(string, optional, tag = "5")]
+    pub gender: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "6")]
+    pub education: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "7")]
+    pub hometown: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "8")]
+    pub address: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// 用户信息返回
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UserOneResponse {
+    #[prost(int32, tag = "1")]
+    pub code: i32,
+    #[prost(string, tag = "2")]
+    pub msg: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "3")]
+    pub data: ::core::option::Option<OneResponse>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UserResponse {
     #[prost(int32, tag = "1")]
     pub id: i32,
@@ -61,16 +93,6 @@ pub struct UserResponse {
     pub created_at: ::core::option::Option<::prost_types::Timestamp>,
     #[prost(message, optional, tag = "5")]
     pub last_login_time: ::core::option::Option<::prost_types::Timestamp>,
-}
-/// 用户信息返回
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct UserOneResponse {
-    #[prost(int32, tag = "1")]
-    pub code: i32,
-    #[prost(string, tag = "2")]
-    pub msg: ::prost::alloc::string::String,
-    #[prost(message, optional, tag = "3")]
-    pub data: ::core::option::Option<UserResponse>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetListResponse {
@@ -106,8 +128,43 @@ pub struct AuthResponse {
     #[prost(message, optional, tag = "3")]
     pub data: ::core::option::Option<AuthBodyResponse>,
 }
+/// 注册返回
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RegisterResponse {
+    #[prost(int32, tag = "1")]
+    pub code: i32,
+    #[prost(string, tag = "2")]
+    pub msg: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "3")]
+    pub data: ::core::option::Option<UserResponse>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TestUser {
+    #[prost(int32, tag = "1")]
+    pub id: i32,
+    #[prost(string, tag = "2")]
+    pub username: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub email: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "4")]
+    pub created_at: ::core::option::Option<::prost_types::Timestamp>,
+    #[prost(message, optional, tag = "5")]
+    pub last_login_time: ::core::option::Option<::prost_types::Timestamp>,
+    #[prost(int32, repeated, tag = "6")]
+    pub role_ids: ::prost::alloc::vec::Vec<i32>,
+}
+/// TestUser返回
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TestUserResponse {
+    #[prost(int32, tag = "1")]
+    pub code: i32,
+    #[prost(string, tag = "2")]
+    pub msg: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "3")]
+    pub data: ::core::option::Option<TestUser>,
+}
 /// Generated server implementations.
-pub mod api_service_server {
+pub mod user_service_server {
     #![allow(
         unused_variables,
         dead_code,
@@ -116,9 +173,16 @@ pub mod api_service_server {
         clippy::let_unit_value,
     )]
     use tonic::codegen::*;
-    /// Generated trait containing gRPC methods that should be implemented for use with ApiServiceServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with UserServiceServer.
     #[async_trait]
-    pub trait ApiService: std::marker::Send + std::marker::Sync + 'static {
+    pub trait UserService: std::marker::Send + std::marker::Sync + 'static {
+        async fn test_user(
+            &self,
+            request: tonic::Request<super::Empty>,
+        ) -> std::result::Result<
+            tonic::Response<super::TestUserResponse>,
+            tonic::Status,
+        >;
         async fn list(
             &self,
             request: tonic::Request<super::Pagination>,
@@ -130,25 +194,31 @@ pub mod api_service_server {
         async fn register(
             &self,
             request: tonic::Request<super::RegisterUserRequest>,
-        ) -> std::result::Result<tonic::Response<super::UserOneResponse>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<super::RegisterResponse>,
+            tonic::Status,
+        >;
         async fn edit(
             &self,
             request: tonic::Request<super::EditUserRequest>,
-        ) -> std::result::Result<tonic::Response<super::UserOneResponse>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<super::RegisterResponse>,
+            tonic::Status,
+        >;
         async fn login(
             &self,
             request: tonic::Request<super::LoginRequest>,
         ) -> std::result::Result<tonic::Response<super::AuthResponse>, tonic::Status>;
     }
     #[derive(Debug)]
-    pub struct ApiServiceServer<T> {
+    pub struct UserServiceServer<T> {
         inner: Arc<T>,
         accept_compression_encodings: EnabledCompressionEncodings,
         send_compression_encodings: EnabledCompressionEncodings,
         max_decoding_message_size: Option<usize>,
         max_encoding_message_size: Option<usize>,
     }
-    impl<T> ApiServiceServer<T> {
+    impl<T> UserServiceServer<T> {
         pub fn new(inner: T) -> Self {
             Self::from_arc(Arc::new(inner))
         }
@@ -199,9 +269,9 @@ pub mod api_service_server {
             self
         }
     }
-    impl<T, B> tonic::codegen::Service<http::Request<B>> for ApiServiceServer<T>
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for UserServiceServer<T>
     where
-        T: ApiService,
+        T: UserService,
         B: Body + std::marker::Send + 'static,
         B::Error: Into<StdError> + std::marker::Send + 'static,
     {
@@ -216,10 +286,53 @@ pub mod api_service_server {
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             match req.uri().path() {
-                "/proto_api.ApiService/List" => {
+                "/proto_api.UserService/TestUser" => {
                     #[allow(non_camel_case_types)]
-                    struct ListSvc<T: ApiService>(pub Arc<T>);
-                    impl<T: ApiService> tonic::server::UnaryService<super::Pagination>
+                    struct TestUserSvc<T: UserService>(pub Arc<T>);
+                    impl<T: UserService> tonic::server::UnaryService<super::Empty>
+                    for TestUserSvc<T> {
+                        type Response = super::TestUserResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::Empty>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as UserService>::test_user(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = TestUserSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/proto_api.UserService/List" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListSvc<T: UserService>(pub Arc<T>);
+                    impl<T: UserService> tonic::server::UnaryService<super::Pagination>
                     for ListSvc<T> {
                         type Response = super::ListResponse;
                         type Future = BoxFuture<
@@ -232,7 +345,7 @@ pub mod api_service_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ApiService>::list(&inner, request).await
+                                <T as UserService>::list(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -259,11 +372,11 @@ pub mod api_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/proto_api.ApiService/One" => {
+                "/proto_api.UserService/One" => {
                     #[allow(non_camel_case_types)]
-                    struct OneSvc<T: ApiService>(pub Arc<T>);
+                    struct OneSvc<T: UserService>(pub Arc<T>);
                     impl<
-                        T: ApiService,
+                        T: UserService,
                     > tonic::server::UnaryService<super::GetUserOneRequest>
                     for OneSvc<T> {
                         type Response = super::UserOneResponse;
@@ -277,7 +390,7 @@ pub mod api_service_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ApiService>::one(&inner, request).await
+                                <T as UserService>::one(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -304,14 +417,14 @@ pub mod api_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/proto_api.ApiService/Register" => {
+                "/proto_api.UserService/Register" => {
                     #[allow(non_camel_case_types)]
-                    struct RegisterSvc<T: ApiService>(pub Arc<T>);
+                    struct RegisterSvc<T: UserService>(pub Arc<T>);
                     impl<
-                        T: ApiService,
+                        T: UserService,
                     > tonic::server::UnaryService<super::RegisterUserRequest>
                     for RegisterSvc<T> {
-                        type Response = super::UserOneResponse;
+                        type Response = super::RegisterResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -322,7 +435,7 @@ pub mod api_service_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ApiService>::register(&inner, request).await
+                                <T as UserService>::register(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -349,14 +462,14 @@ pub mod api_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/proto_api.ApiService/Edit" => {
+                "/proto_api.UserService/Edit" => {
                     #[allow(non_camel_case_types)]
-                    struct EditSvc<T: ApiService>(pub Arc<T>);
+                    struct EditSvc<T: UserService>(pub Arc<T>);
                     impl<
-                        T: ApiService,
+                        T: UserService,
                     > tonic::server::UnaryService<super::EditUserRequest>
                     for EditSvc<T> {
-                        type Response = super::UserOneResponse;
+                        type Response = super::RegisterResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -367,7 +480,7 @@ pub mod api_service_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ApiService>::edit(&inner, request).await
+                                <T as UserService>::edit(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -394,10 +507,10 @@ pub mod api_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/proto_api.ApiService/Login" => {
+                "/proto_api.UserService/Login" => {
                     #[allow(non_camel_case_types)]
-                    struct LoginSvc<T: ApiService>(pub Arc<T>);
-                    impl<T: ApiService> tonic::server::UnaryService<super::LoginRequest>
+                    struct LoginSvc<T: UserService>(pub Arc<T>);
+                    impl<T: UserService> tonic::server::UnaryService<super::LoginRequest>
                     for LoginSvc<T> {
                         type Response = super::AuthResponse;
                         type Future = BoxFuture<
@@ -410,7 +523,7 @@ pub mod api_service_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ApiService>::login(&inner, request).await
+                                <T as UserService>::login(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -459,7 +572,7 @@ pub mod api_service_server {
             }
         }
     }
-    impl<T> Clone for ApiServiceServer<T> {
+    impl<T> Clone for UserServiceServer<T> {
         fn clone(&self) -> Self {
             let inner = self.inner.clone();
             Self {
@@ -472,8 +585,8 @@ pub mod api_service_server {
         }
     }
     /// Generated gRPC service name
-    pub const SERVICE_NAME: &str = "proto_api.ApiService";
-    impl<T> tonic::server::NamedService for ApiServiceServer<T> {
+    pub const SERVICE_NAME: &str = "proto_api.UserService";
+    impl<T> tonic::server::NamedService for UserServiceServer<T> {
         const NAME: &'static str = SERVICE_NAME;
     }
 }

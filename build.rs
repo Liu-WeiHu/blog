@@ -6,6 +6,6 @@ fn main() {
         .build_client(false)
         .out_dir(&out_dir)
         .file_descriptor_set_path(out_dir.join("file_descriptor_set.bin"))
-        .compile_protos(&["proto/api.proto", "proto/common.proto", "proto/request.proto", "proto/response.proto"], &["proto"])
+        .compile_protos(&["proto/user.proto", "proto/common.proto"], &["proto"])
         .expect("failed to compile protos");
 }

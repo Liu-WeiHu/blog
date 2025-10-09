@@ -23,8 +23,8 @@ pub struct Claims {
 
 #[derive(Serialize)]
 pub struct AuthBody {
-    access_token: String,
-    token_type: String,
+    pub access_token: String,
+    pub token_type: String,
 }
 
 impl AuthBody {

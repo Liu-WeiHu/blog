@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package proto_api;
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// 获取一个用户信息入参
+message GetUserOneRequest {
+  int32 id = 1;
+};
+
+// 注册用户入参
+message RegisterUserRequest {
+  string username = 1;
+  string password = 2;
+  string email = 3;
+  optional int32 age = 4;
+  optional string gender = 5;
+  optional string education = 6;
+  optional string hometown = 7;
+  optional string address = 8;
+};
+
+// 编辑用户入参
+message EditUserRequest {
+  int32 id = 1;
+  RegisterUserRequest user = 2;
+};
+
+// 登录入参
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+};
+
+message OneResponse {
+    int32 code = 1;
+    string username = 2;
+    string email = 3;
+    optional int32 age = 4;
+    optional string gender = 5;
+    optional string education = 6;
+    optional string hometown = 7;
+    optional string address = 8;
+}
+
+// 用户信息返回
+message UserOneResponse {
+  int32 code = 1;
+  string msg = 2;
+  optional OneResponse data = 3;
+};
+
+message UserResponse {
+  int32 id = 1;
+  string username = 2;
+  string email = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp last_login_time = 5;
+};
+
+message GetListResponse {
+  repeated UserResponse users = 1;
+  int64 total = 2;
+};
+// 用户列表返回
+message ListResponse {
+  int32 code = 1;
+  string msg = 2;
+  optional GetListResponse data = 3;
+};
+
+message AuthBodyResponse {
+  string accessToken = 1;
+  string tokenType = 2;
+};
+// 登录返回
+message AuthResponse {
+  int32 code = 1;
+  string msg = 2;
+  optional AuthBodyResponse data = 3;
+};
+
+// 注册返回
+message RegisterResponse {
+  int32 code = 1;
+  string msg = 2;
+  optional UserResponse data = 3;
+};
+
+message TestUser {
+    int32 id = 1;
+    string username = 2;
+    string email = 3;
+    google.protobuf.Timestamp created_at = 4;
+    google.protobuf.Timestamp last_login_time = 5;
+    repeated int32 role_ids = 6;
+}
+// TestUser返回
+message TestUserResponse {
+  int32 code = 1;
+  string msg = 2;
+  optional TestUser data = 3;
+};
+
+service UserService {
+  rpc TestUser(Empty) returns (TestUserResponse);
+  rpc List (Pagination) returns (ListResponse);
+  rpc One (GetUserOneRequest) returns (UserOneResponse);
+  rpc Register (RegisterUserRequest) returns (RegisterResponse);
+  rpc Edit (EditUserRequest) returns (RegisterResponse);
+  rpc Login (LoginRequest) returns (AuthResponse);
+}
