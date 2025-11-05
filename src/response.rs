@@ -2,10 +2,9 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-
 use serde::Serialize;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone, Copy)]
 pub enum ErrCode {
     InternalError,
     InvalidToken,
@@ -21,6 +20,44 @@ pub enum ErrCode {
     UnPermission,
 }
 
+impl ErrCode {
+    /// 获取错误码
+    const fn code(self) -> i32 {
+        match self {
+            Self::InternalError => 100001,
+            Self::DbServiceUnavailable => 100002,
+            Self::RedisServiceUnavailable => 100003,
+            Self::InvalidToken => 200001,
+            Self::UnAuthorized => 200002,
+            Self::UnPermission => 200003,
+            Self::InputArgsError => 300001,
+            Self::InputNameInvalid => 300002,
+            Self::InputEmailInvalid => 300003,
+            Self::InputPasswordInvalid => 300004,
+            Self::InputLoginInvalid => 300005,
+            Self::EmailAlreadyRegistered => 300006,
+        }
+    }
+
+    /// 获取错误消息
+    const fn message(self) -> &'static str {
+        match self {
+            Self::InternalError => "服务器内部错误",
+            Self::DbServiceUnavailable => "数据库服务不可用",
+            Self::RedisServiceUnavailable => "redis服务不可用",
+            Self::InvalidToken => "无效的token",
+            Self::UnAuthorized => "没有授权",
+            Self::UnPermission => "权限不足",
+            Self::InputArgsError => "入参错误",
+            Self::InputNameInvalid => "输入名字无效",
+            Self::InputEmailInvalid => "输入邮箱无效",
+            Self::InputPasswordInvalid => "输入密码无效",
+            Self::InputLoginInvalid => "输入邮箱或密码错误",
+            Self::EmailAlreadyRegistered => "邮箱已被注册",
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub struct Resp<T: Serialize> {
     pub code: i32,
@@ -29,35 +66,26 @@ pub struct Resp<T: Serialize> {
 }
 
 pub fn make_response<T: Serialize>(input: Result<T, ErrCode>) -> Resp<T> {
-    let (code, msg, data) = match input {
-        Ok(data) => (0, "".to_string(), Some(data)),
-        Err(err_code) => match err_code {
-            ErrCode::InternalError => (100001, "服务器内部错误".to_string(), None),
-            ErrCode::DbServiceUnavailable => (100002, "数据库服务不可用".to_string(), None),
-            ErrCode::RedisServiceUnavailable => (100003, "redis服务不可用".to_string(), None),
-
-            ErrCode::InvalidToken => (200001, "无效的token".to_string(), None),
-            ErrCode::UnAuthorized => (200002, "没有授权".to_string(), None),
-            ErrCode::UnPermission => (200003, "权限不足".to_string(), None),
-
-            ErrCode::InputArgsError => (300001, "入参错误".to_string(), None),
-            ErrCode::InputNameInvalid => (300002, "输入名字无效".to_string(), None),
-            ErrCode::InputEmailInvalid => (300003, "输入邮箱无效".to_string(), None),
-            ErrCode::InputPasswordInvalid => (300003, "输入密码无效".to_string(), None),
-            ErrCode::InputLoginInvalid => (300004, "输入邮箱或密码错误".to_string(), None),
-            ErrCode::EmailAlreadyRegistered => (300005, "邮箱已被注册".to_string(), None),
+    match input {
+        Ok(data) => Resp {
+            code: 0,
+            msg: String::new(),
+            data: Some(data),
         },
-    };
-
-    Resp { code, msg, data }
+        Err(err_code) => Resp {
+            code: err_code.code(),
+            msg: err_code.message().to_string(),
+            data: None,
+        },
+    }
 }
 
-impl<T: Serialize + Send + Sync> IntoResponse for Resp<T> {
+impl<T: Serialize> IntoResponse for Resp<T> {
     fn into_response(self) -> Response {
         let status = match self.code {
             0 => StatusCode::OK,
-            200000..300000 => StatusCode::UNAUTHORIZED,
-            300000..400000 => StatusCode::BAD_REQUEST,
+            200001..=299999 => StatusCode::UNAUTHORIZED,
+            300001..=399999 => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (status, axum::Json(self)).into_response()
