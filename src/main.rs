@@ -13,10 +13,11 @@ mod rbac;
 mod response;
 mod route;
 mod service;
+mod logs;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    logs::init_tracing();
     let pool = init::get_db_pool().await;
     let redis = init::get_redis_client().await;
     let mut ctx = GlobalContext::new(pool, redis);
