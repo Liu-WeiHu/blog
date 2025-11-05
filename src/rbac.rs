@@ -1,10 +1,17 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::{HashMap, HashSet}, sync::Arc};
 
-// 就初始化一次,然后只读不写,不涉及数据安全问题.  第一个键是 权限点, 第二个键是 role_id,
-// value是role名字
-pub type PermissionRegistry = Arc<HashMap<PermissionPoints, HashMap<i32, String>>>;
+// 就初始化一次,然后只读不写,不涉及数据安全问题.
+// PermissionRegistry 将每个权限点映射到一份 PermissionEntry，
+// 内含允许的 role id 集合与是否允许匿名访问的标记。
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct PermissionEntry {
+    pub role_ids: HashSet<i32>,
+    pub allow_anonymous: bool,
+}
 
-#[derive(PartialEq, Eq, Hash, serde::Deserialize)]
+pub type PermissionRegistry = Arc<HashMap<PermissionPoints, PermissionEntry>>;
+
+#[derive(Clone, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize, Debug)]
 pub enum PermissionPoints {
     // 可视权限点
     ViewPostCreation, // 查看文章创建按钮
@@ -21,8 +28,6 @@ pub enum PermissionPoints {
 
     Unknown, // 未知权限点
 }
-
-pub const ANONYMOUS: &str = "Anonymous User";
 
 impl From<String> for PermissionPoints {
     fn from(s: String) -> Self {

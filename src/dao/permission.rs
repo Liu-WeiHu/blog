@@ -4,25 +4,27 @@ use crate::{
     dto::permission::{PermissionType, RbacRolePermission},
     model::rbac::UserRole,
 };
+use async_trait::async_trait;
 
 #[allow(dead_code)]
+#[async_trait]
 pub trait RbacDao: Send + Sync {
-    fn select_role_permission(
+   async fn select_role_permission(
         &self,
         executor: &mut PgConnection,
-    ) -> impl Future<Output = Result<Vec<RbacRolePermission>, sqlx::Error>> + Send;
+    ) -> Result<Vec<RbacRolePermission>, sqlx::Error>;
 
-    fn select_permissions_by_user_id(
+    async fn select_permissions_by_user_id(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl Future<Output = Result<Vec<String>, sqlx::Error>> + Send;
+    ) -> Result<Vec<String>, sqlx::Error>;
 
-    fn select_user_role_by_user_id(
+    async fn select_user_role_by_user_id(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl Future<Output = Result<Vec<UserRole>, sqlx::Error>> + Send;
+    ) -> Result<Vec<UserRole>, sqlx::Error>;
 }
 
 struct RbacDaoI;
@@ -31,6 +33,7 @@ pub fn new_rbac_dao() -> impl RbacDao {
     RbacDaoI {}
 }
 
+#[async_trait]
 impl RbacDao for RbacDaoI {
     async fn select_role_permission(
         &self,

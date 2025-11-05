@@ -21,10 +21,10 @@ pub async fn list(
 // #[axum::debug_handler]
 pub async fn one(
     Extension(ctx): Extension<RequestContext>,
-    // Path(id): Path<i32>,
+    Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let svc = new_posts_service(ctx);
-    let res = svc.one(1).await;
+    let res = svc.one(id).await;
     response::make_response(res)
 }
 

@@ -1,30 +1,34 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    context::Context,
+    context::AsyncContext,
     dao::permission::{RbacDao, new_rbac_dao},
-    rbac::{PermissionPoints, PermissionRegistry},
+    rbac::{PermissionEntry, PermissionPoints, PermissionRegistry},
     response::ErrCode,
     service::handle_error,
 };
+use async_trait::async_trait;
 
+const ANONYMOUS: &str = "Anonymous User";
+
+#[async_trait]
 pub trait RbacService: Send + Sync + Clone {
-    fn get_rbac_permission(
-        &self,
-    ) -> impl Future<Output = Result<PermissionRegistry, ErrCode>> + Send;
-    fn get_user_permission(&self) -> impl Future<Output = Result<Vec<String>, ErrCode>> + Send;
+    async fn get_rbac_permission(&self) -> Result<PermissionRegistry, ErrCode>;
+    async fn get_user_permission(&self) -> Result<Vec<String>, ErrCode>;
 }
 
 #[derive(Clone)]
-struct RbacServiceI<Ctx: Context> {
+struct RbacServiceI<Ctx: AsyncContext> {
     ctx: Ctx,
 }
 
-pub fn new_rbac_service<Ctx: Context>(ctx: Ctx) -> impl RbacService {
+pub fn new_rbac_service<Ctx: AsyncContext>(ctx: Ctx) -> impl RbacService {
     RbacServiceI { ctx }
 }
 
-impl<Ctx: Context> RbacService for RbacServiceI<Ctx> {
+#[async_trait]
+impl<Ctx: AsyncContext> RbacService for RbacServiceI<Ctx> {
+
     async fn get_rbac_permission(&self) -> Result<PermissionRegistry, ErrCode> {
         tracing::debug!("get_rbac_permission start handle");
 
@@ -36,10 +40,17 @@ impl<Ctx: Context> RbacService for RbacServiceI<Ctx> {
             .into_iter()
             .fold(
                 HashMap::new(),
-                |mut acc: HashMap<PermissionPoints, HashMap<i32, String>>, item| {
+                |mut acc: HashMap<PermissionPoints, PermissionEntry>, item| {
                     acc.entry(item.permission_name)
-                        .or_default()
-                        .insert(item.id, item.role_name.into_owned());
+                        .and_modify(|e| {
+                            e.role_ids.insert(item.id);
+                            e.allow_anonymous =
+                                e.allow_anonymous || item.role_name == ANONYMOUS;
+                        })
+                        .or_insert_with(|| PermissionEntry {
+                            role_ids: vec![item.id].into_iter().collect(),
+                            allow_anonymous: item.role_name == ANONYMOUS,
+                        });
                     acc
                 },
             );

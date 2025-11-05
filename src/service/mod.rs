@@ -70,8 +70,9 @@ fn handle_sqlx_error(err: &sqlx::Error) -> ErrCode {
 /// 处理 Redis 错误
 fn handle_redis_error(err: &redis::RedisError) -> ErrCode {
     match err.kind() {
-        redis::ErrorKind::AuthenticationFailed => ErrCode::RedisServiceUnavailable,
-        redis::ErrorKind::IoError => ErrCode::RedisServiceUnavailable,
+        redis::ErrorKind::AuthenticationFailed | redis::ErrorKind::IoError => {
+            ErrCode::RedisServiceUnavailable
+        }
         _ => ErrCode::InternalError,
     }
 }

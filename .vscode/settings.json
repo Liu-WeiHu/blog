@@ -1,0 +1,8 @@
+{
+    "terminal.integrated.env.linux": {
+        "RUST_LOG": "debug",
+        "DATABASE_URL": "postgres://postgres:postgres@127.0.0.1:5432/demo",
+        "JWT_SECRET": "abc123456",
+        "REDIS_URL": "redis://127.0.0.1:6379",
+    }
+}

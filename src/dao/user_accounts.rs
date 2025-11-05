@@ -3,45 +3,47 @@ use std::borrow::Cow;
 use crate::{dto::user_accounts::UserInfo, model::user_accounts::UserAccounts};
 
 use sqlx::PgConnection;
+use async_trait::async_trait;
 
 #[allow(dead_code)]
+#[async_trait]
 pub trait UserAccountsDao: Send + Sync {
-    fn select_all(
+    async fn select_all(
         &self,
         executor: &mut PgConnection,
         offset: i64,
         limit: i64,
-    ) -> impl Future<Output = Result<Vec<UserAccounts>, sqlx::Error>> + Send;
-    fn select_one(
+    ) -> Result<Vec<UserAccounts>, sqlx::Error>;
+    async fn select_one(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
-    fn select_by_id(
+    ) -> Result<UserAccounts, sqlx::Error>;
+    async fn select_by_id(
         &self,
         executor: &mut PgConnection,
         user_id: i32,
-    ) -> impl Future<Output = Result<UserInfo, sqlx::Error>> + Send;
-    fn insert(
+    ) -> Result<UserInfo, sqlx::Error>;
+    async fn insert(
         &self,
         executor: &mut PgConnection,
         user: UserAccounts,
-    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
-    fn select_by_email(
+    ) -> Result<UserAccounts, sqlx::Error>;
+    async fn select_by_email(
         &self,
         executor: &mut PgConnection,
         email: Cow<'static, str>,
-    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
-    fn update_login_time_by_id(
+    ) -> Result<UserAccounts, sqlx::Error>;
+    async fn update_login_time_by_id(
         &self,
         executor: &mut PgConnection,
         user: UserAccounts,
-    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
-    fn update(
+    ) -> Result<UserAccounts, sqlx::Error>;
+    async fn update(
         &self,
         executor: &mut PgConnection,
         user: UserAccounts,
-    ) -> impl Future<Output = Result<UserAccounts, sqlx::Error>> + Send;
+    ) -> Result<UserAccounts, sqlx::Error>;
 }
 
 struct UserAccountsDaoI;
@@ -50,6 +52,7 @@ pub fn new_user_accounts_dao() -> impl UserAccountsDao {
     UserAccountsDaoI {}
 }
 
+#[async_trait]
 impl UserAccountsDao for UserAccountsDaoI {
     async fn select_all(
         &self,
