@@ -28,14 +28,12 @@ mod response;
 mod route;
 mod route_grpc;
 mod service;
+mod logs;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_file(true) // 显示文件名
-        .with_line_number(true) // 显示行号
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env()) // 添加环境变量支持
-        .init();
+    logs::init_tracing();
+
     let pool = init::get_db_pool().await;
     let redis = init::get_redis_client().await;
     let mut ctx = GlobalContext::new(pool, redis);
