@@ -1,7 +1,8 @@
 use axum::{Extension, Json, extract::Path, response::IntoResponse};
+use tracing::{info, instrument};
 
 use crate::{
-    context::RequestContext,
+    context::{RequestContext, Context},
     dto::posts::AddPostsReq,
     model::posts::Posts,
     pagination::Pagination,
@@ -9,10 +10,12 @@ use crate::{
     service::posts::{PostsService, new_posts_service},
 };
 
+#[instrument(skip(ctx), fields(cache_user = ?ctx.get_user()))]
 pub async fn list(
     Extension(ctx): Extension<RequestContext>,
     pagination: Pagination,
 ) -> impl IntoResponse {
+    info!("Listing posts with pagination");
     let svc = new_posts_service(ctx);
     let res = svc.list(pagination).await;
     response::make_response(res)

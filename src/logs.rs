@@ -1,87 +1,34 @@
-use chrono::Local;
-use tracing::Subscriber;
-use tracing_subscriber::{
-    fmt::{self, format::Writer, FmtContext, FormatEvent, FormatFields},
-    layer::SubscriberExt,
-    registry::LookupSpan,
-    util::SubscriberInitExt,
-    EnvFilter,
-};
+use std::io::IsTerminal;
 
-const ERROR_COLORED: &str = "\x1b[31mERROR\x1b[0m";
-const WARN_COLORED: &str = "\x1b[33mWARN \x1b[0m";
-const INFO_COLORED: &str = "\x1b[32mINFO \x1b[0m";
-const DEBUG_COLORED: &str = "\x1b[34mDEBUG\x1b[0m";
-const TRACE_COLORED: &str = "\x1b[35mTRACE\x1b[0m";
+use time::macros::format_description;
+use tracing_error::ErrorLayer;
+use tracing_subscriber::{EnvFilter, fmt::time::LocalTime, prelude::*};
 
 pub fn init_tracing() {
+    // 判断是否支持彩色输出
+    let enable_color = std::io::stdout().is_terminal();
+    // 设置日志格式
+    let fmt_timer = LocalTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"));
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        // 设置时间格式
+        .with_timer(fmt_timer)
+        // 是否启用彩色输出
+        .with_ansi(enable_color)
+        // 显示模块路径
+        .with_target(true)
+        // 显示行号
+        .with_line_number(true);
+    
+    // 调试模式下显示文件名
+    #[cfg(debug_assertions)]
+    let fmt_layer = fmt_layer.with_file(true);
+
     tracing_subscriber::registry()
-        .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,tower_http=debug".into())
-        )
-        .with(fmt::layer().event_format(CustomEventFormatter))
+        // 从环境变量读取日志级别配置
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        // 记录错误信息
+        .with(ErrorLayer::default())
+        // 加载日志格式
+        .with(fmt_layer)
         .init();
-}
-
-// 自定义事件格式化器，缩短模块路径
-struct CustomEventFormatter;
-
-impl<S, N> FormatEvent<S, N> for CustomEventFormatter
-where
-    S: Subscriber + for<'a> LookupSpan<'a>,
-    N: for<'a> FormatFields<'a> + 'static,
-{
-    fn format_event(
-        &self,
-        ctx: &FmtContext<'_, S, N>,
-        mut writer: Writer<'_>,
-        event: &tracing::Event<'_>,
-    ) -> std::fmt::Result {
-        let meta = event.metadata();
-
-        // 时间戳
-        let now = Local::now();
-        write!(writer, "{} ", now.format("%Y-%m-%d %H:%M:%S"))?;
-
-        #[cfg(debug_assertions)]
-        {
-            // 日志级别（带颜色）
-            let level = meta.level();
-            let level_str = match *level {
-                tracing::Level::ERROR => ERROR_COLORED,
-                tracing::Level::WARN => WARN_COLORED,
-                tracing::Level::INFO => INFO_COLORED,
-                tracing::Level::DEBUG => DEBUG_COLORED,
-                tracing::Level::TRACE => TRACE_COLORED,
-            };
-            write!(writer, "{} ", level_str)?;
-        }
-
-        #[cfg(not(debug_assertions))]
-        {
-            // 日志级别
-            write!(writer, "{:<5} ", meta.level())?;
-        }
-
-        // 缩短后的模块路径（保留最后两级）
-        // let target = meta.target();
-        // let parts: Vec<&str> = target.split("::").collect();
-        // let short_target = if parts.len() > 2 {
-        //     parts[parts.len() - 2..].join("::")
-        // } else {
-        //     target.to_string()
-        // };
-        // write!(writer, "{}: ", short_target)?;
-
-        // 文件名和行号
-        if let Some(file) = meta.file() && let Some(line) = meta.line() {
-            write!(writer, "{}:{}: ", file, line)?;
-        }
-
-        // 事件字段内容
-        ctx.field_format().format_fields(writer.by_ref(), event)?;
-
-        writeln!(writer)
-    }
 }

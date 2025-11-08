@@ -35,9 +35,9 @@ pub fn new_posts_service<Ctx: AsyncContext>(ctx: Ctx) -> impl PostsService {
 
 #[async_trait]
 impl<Ctx: AsyncContext> PostsService for PostsServiceI<Ctx> {
-    #[tracing::instrument(skip(self), fields(offset = pag.offset, limit = pag.limit))]
+    #[tracing::instrument(skip(self))]
     async fn list(&self, pag: Pagination) -> Result<Vec<Posts>, ErrCode> {
-        tracing::debug!("Listing posts with pagination");
+        tracing::info!("Listing posts with pagination");
 
         self.ctx.can_access(PermissionPoints::ListPost)?;
         let mut conn = self.ctx.get_db_conn().await?;

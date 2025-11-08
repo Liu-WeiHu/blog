@@ -1,8 +1,6 @@
-use std::time::Duration;
-
 use axum::{
     Json,
-    extract::{MatchedPath, Request, State},
+    extract::{Request, State},
     http::StatusCode,
     middleware,
     response::IntoResponse,
@@ -123,42 +121,4 @@ pub async fn auth_middleware(
     }
     req.extensions_mut().insert(request_ctx);
     next.run(req).await
-}
-
-pub fn log_request<B>(req: &Request<B>, _span: &tracing::Span) {
-    let method = req.method();
-    let uri = req.uri();
-    let matched_path = req
-        .extensions()
-        .get::<MatchedPath>()
-        .map(|path| path.as_str())
-        .unwrap_or("unknown");
-
-    tracing::info!(
-        method = %method,
-        uri = %uri,
-        matched_path = %matched_path,
-        "Incoming request"
-    );
-}
-
-pub fn log_response(response: &axum::response::Response, latency: Duration, _span: &tracing::Span) {
-    let status = response.status();
-
-    match status {
-        status if status.is_success() => {
-            tracing::info!(
-                status = %status,
-                latency_ms = latency.as_millis(),
-                "Request completed successfully"
-            );
-        }
-        _ => {
-            tracing::error!(
-                status = %status,
-                latency_ms = latency.as_millis(),
-                "Request completed error"
-            );
-        }
-    }
 }
