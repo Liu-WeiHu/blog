@@ -10,7 +10,7 @@ use crate::{
     service::posts::{PostsService, new_posts_service},
 };
 
-#[instrument(skip(ctx), fields(cache_user = ?ctx.get_user()))]
+#[instrument(name = "", skip(ctx), fields(cache_user = ?ctx.get_user()))]
 pub async fn list(
     Extension(ctx): Extension<RequestContext>,
     pagination: Pagination,

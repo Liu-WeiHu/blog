@@ -51,7 +51,7 @@ pub fn new_route(ctx: GlobalContext) -> Router {
 
     let api_route = Router::new()
         .nest("/api/v1", service_route)
-        // 把 请求 ID 塞进响应头
+        // 传播 request-id 到响应头
         .layer(PropagateRequestIdLayer::x_request_id())
         // 允许跨域
         .layer(CorsLayer::permissive())
@@ -59,28 +59,31 @@ pub fn new_route(ctx: GlobalContext) -> Router {
         .layer(CompressionLayer::new())
         // 捕获 panic
         .layer(CatchPanicLayer::new())
+        // 创建根 span 并记录 trace_id
         .layer(
             TraceLayer::new_for_http()
                 // 记录请求 ID
                 .make_span_with(|request: &Request<_>| {
                     let trace_id = request
                         .headers()
-                        .get(header::HeaderName::from_static("x-request-id"))
+                        .get("x-request-id")
                         .and_then(|v| v.to_str().ok())
                         .unwrap_or("unknown");
                     info_span!("http-request",
                         trace_id = %trace_id,
+                        method = %request.method(),
+                        uri = %request.uri(),
                         status_code = tracing::field::Empty,
                     )
                 })
                 // 记录请求方法和路径
-                .on_request(|request: &Request<_>, _span: &Span| {
-                    info!(
-                        request_method = %request.method(),
-                        request_uri_path = %request.uri().path(),
-                        "http request received"
-                    )
-                })
+                // .on_request(|request: &Request<_>, _span: &Span| {
+                //     info!(
+                //         request_method = %request.method(),
+                //         request_uri_path = %request.uri().path(),
+                //         "http request received"
+                //     )
+                // })
                 // 记录响应状态码和响应时间
                 .on_response(|response: &Response<_>, latency: Duration, _span: &Span| {
                     let status = response.status();
@@ -111,15 +114,15 @@ pub fn new_route(ctx: GlobalContext) -> Router {
                 //     info!("http body sending {} bytes in {:?}", body, latency);
                 // })
                 // 记录响应体发送完成情况
-                .on_eos(|_trailers: Option<&HeaderMap>, stream_duration: Duration, _span: &Span| {
-                    warn!("http stream closed after {:?}", stream_duration)
-                })
+                // .on_eos(|_trailers: Option<&HeaderMap>, stream_duration: Duration, _span: &Span| {
+                //     warn!("http stream closed after {:?}", stream_duration)
+                // })
                 // 记录请求失败情况
                 .on_failure(|_error, latency: Duration, _span: &Span| {
                     error!("http request failure error: {:?} in {:?}", _error, latency)
                 }),
         )
-        // 设置请求 ID，如果没有的话就生成一个
+         // 生成或提取 request-id
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
     Router::new()
