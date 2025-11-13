@@ -8,12 +8,18 @@ use crate::{
 
 use axum::{
     Router,
-    http::{HeaderMap, Request, Response, StatusCode, header},
+    http::{Request, Response, StatusCode},
     middleware,
     routing::{get, post, put},
 };
-use tracing::{Span, error, info, info_span, warn};
-use tower_http::{catch_panic::CatchPanicLayer, compression::CompressionLayer, cors::CorsLayer, request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer}, trace::TraceLayer};
+use tower_http::{
+    catch_panic::CatchPanicLayer,
+    compression::CompressionLayer,
+    cors::CorsLayer,
+    request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
+    trace::TraceLayer,
+};
+use tracing::{Span, info, info_span, warn};
 
 pub fn new_route(ctx: GlobalContext) -> Router {
     //  账号相关路由
@@ -84,14 +90,15 @@ pub fn new_route(ctx: GlobalContext) -> Router {
                 //         "http request received"
                 //     )
                 // })
+                .on_request(())
                 // 记录响应状态码和响应时间
                 .on_response(|response: &Response<_>, latency: Duration, _span: &Span| {
                     let status = response.status();
                     _span.record("status_code", tracing::field::display(status));
-                    
+
                     // 记录响应时间，便于性能分析
                     let latency_ms = latency.as_millis();
-                    
+
                     match status {
                         StatusCode::OK => {
                             if latency_ms > 1000 {
@@ -99,10 +106,7 @@ pub fn new_route(ctx: GlobalContext) -> Router {
                             } else {
                                 info!("request completed in {:?}", latency);
                             }
-                        },
-                        StatusCode::INTERNAL_SERVER_ERROR => {
-                            error!("server error in {:?}", latency);
-                        },
+                        }
                         _ => {
                             warn!("request failed with status {} in {:?}", status, latency);
                         }
@@ -118,11 +122,12 @@ pub fn new_route(ctx: GlobalContext) -> Router {
                 //     warn!("http stream closed after {:?}", stream_duration)
                 // })
                 // 记录请求失败情况
-                .on_failure(|_error, latency: Duration, _span: &Span| {
-                    error!("http request failure error: {:?} in {:?}", _error, latency)
-                }),
+                // .on_failure(|_error, latency: Duration, _span: &Span| {
+                //     error!("http request failure error: {:?} in {:?}", _error, latency)
+                // }),
+                .on_failure(()),
         )
-         // 生成或提取 request-id
+        // 生成或提取 request-id
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
     Router::new()
