@@ -9,7 +9,7 @@ pub fn init_tracing() {
     let enable_color = std::io::stdout().is_terminal();
     // 设置日志格式
     let fmt_timer = LocalTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"));
-    let fmt_layer = tracing_subscriber::fmt::layer()
+    let mut fmt_layer = tracing_subscriber::fmt::layer()
         // 设置时间格式
         .with_timer(fmt_timer)
         // 是否启用彩色输出
@@ -18,14 +18,20 @@ pub fn init_tracing() {
         .with_target(true)
         // 显示行号
         .with_line_number(true);
-    
+
     // 调试模式下显示文件名
-    #[cfg(debug_assertions)]
-    let fmt_layer = fmt_layer.with_file(true);
+    // #[cfg(debug_assertions)]
+    // let fmt_layer = fmt_layer.with_file(true);
+    let default_filter = if cfg!(debug_assertions) {
+        fmt_layer = fmt_layer.with_file(true);
+        "debug"
+    } else {
+        "info"
+    };
 
     tracing_subscriber::registry()
         // 从环境变量读取日志级别配置
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| default_filter.into()))
         // 记录错误信息
         .with(ErrorLayer::default())
         // 加载日志格式
