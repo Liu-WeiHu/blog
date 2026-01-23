@@ -19,12 +19,10 @@ pub fn init_tracing() {
         .with_ansi(enable_color)
         // 显示模块路径
         .with_target(true)
+        // 显示文件名
+        .with_file(true)
         // 显示行号
         .with_line_number(true);
-    
-    // 调试模式下显示文件名
-    #[cfg(debug_assertions)]
-    let console_layer = console_layer.with_file(true);
 
     // 创建日志目录
     let log_dir = "logs";
@@ -47,14 +45,16 @@ pub fn init_tracing() {
         .with_target(true)
         .with_line_number(true);
 
-    tracing_subscriber::registry()
+    let registry = tracing_subscriber::registry()
         // 从环境变量读取日志级别配置
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         // 记录错误信息
-        .with(ErrorLayer::default())
-        // 加载控制台日志格式
-        .with(console_layer)
-        // 加载文件日志格式
-        .with(file_layer)
-        .init();
+        .with(ErrorLayer::default());
+
+    // 如果是终端环境，同时输出到控制台；否则只输出到文件
+    if cfg!(debug_assertions) {
+        registry.with(console_layer).init();
+    } else {
+        registry.with(file_layer).init();
+    }
 }
